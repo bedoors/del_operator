@@ -1,0 +1,1853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>The del operator, simulated</title>
+<meta name="description" content="A live lab for the del operator: gradient, divergence and curl you can push around and zoom into, plus the history of the ∇ symbol.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&display=swap">
+<style>
+:root{
+  --vellum:#f2ead5;
+  --sheet:#f9f4e6;
+  --ink:#14264b;
+  --ink-2:#3b4a6e;
+  --ink-3:#6c7591;
+  --brass:#b98019;
+  --brass-2:#e2ad45;
+  --rule:#d6c497;
+  --amber:#d9761b;
+  --verdigris:#237d8c;
+  --rubric:#a3223a;
+  --rubric-on-ink:#ffadba;
+  --heat-pos:#eba23a;
+  --heat-neg:#3e9eab;
+  --heat-max:.66;
+  --on-brass:#14264b;
+  --focus:#b98019;
+  --display:'Old Standard TT','Bodoni 72','Didot','Century Schoolbook','Times New Roman',serif;
+  --text:'STIX Two Text','Iowan Old Style','Palatino Linotype',Palatino,'Times New Roman',serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --vellum:#0f1628; --sheet:#121b30;
+    --ink:#eee3c9; --ink-2:#c9bfa7; --ink-3:#958e7c;
+    --brass:#e3ad49; --brass-2:#f1c96f; --rule:#2e3a5a;
+    --amber:#f29b4b; --verdigris:#5fc0cb;
+    --rubric:#ff8fa1; --rubric-on-ink:#a3223a;
+    --heat-pos:#c98428; --heat-neg:#2a8794; --heat-max:.6;
+    --on-brass:#14264b; --focus:#f1c96f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --vellum:#0f1628; --sheet:#121b30;
+  --ink:#eee3c9; --ink-2:#c9bfa7; --ink-3:#958e7c;
+  --brass:#e3ad49; --brass-2:#f1c96f; --rule:#2e3a5a;
+  --amber:#f29b4b; --verdigris:#5fc0cb;
+  --rubric:#ff8fa1; --rubric-on-ink:#a3223a;
+  --heat-pos:#c98428; --heat-neg:#2a8794; --heat-max:.6;
+  --on-brass:#14264b; --focus:#f1c96f;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{
+  margin:0;background-color:var(--vellum);color:var(--ink);
+  font-family:var(--text);font-size:17px;line-height:1.55;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .09 0 0 0 0 .11 0 0 0 0 .2 .22 0 0 0 -.07'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+i,em{font-style:italic}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1220px;margin:0 auto;padding:0 clamp(16px,4vw,44px)}
+
+/* ——— notation ——— */
+.m{color:var(--rubric);font-weight:600;font-size:1.07em;white-space:nowrap}
+.m i{font-style:italic}
+.uvs{display:inline-block;width:.65em;height:1.4em;vertical-align:-.3em;overflow:visible;color:var(--rubric)}
+.uvs text{font-family:var(--text);font-size:20px;font-weight:700;font-style:normal;fill:currentColor;text-anchor:middle}
+.uvs path{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.term{white-space:nowrap}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-size:.8em;line-height:1.1;vertical-align:middle;margin-right:.04em}
+.frac>span:first-child{border-bottom:.075em solid currentColor;padding:0 .24em .05em;align-self:stretch;text-align:center}
+.frac>span:last-child{padding-top:.05em}
+.frac.sm{font-size:.7em}
+
+/* ——— masthead ——— */
+.masthead{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"text fig";
+  gap:20px clamp(24px,5vw,64px);align-items:center;
+  padding:clamp(28px,6vw,58px) 0 clamp(22px,3.5vw,34px);border-bottom:1px solid var(--rule);
+}
+.mast-text{grid-area:text;min-width:0}
+.title{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(2.3rem,5.6vw,4.4rem);line-height:1;letter-spacing:-.012em;max-width:15ch;text-wrap:balance}
+.sub{margin:.75em 0 0;max-width:50ch;font-size:clamp(1.05rem,1.6vw,1.22rem);line-height:1.5;color:var(--ink-2)}
+.formula-box{
+  display:inline-flex;align-items:center;gap:.36em;margin-top:22px;max-width:100%;overflow-x:auto;
+  padding:.45em 1.1em .55em;border:1.5px solid var(--brass);border-radius:12px;background:var(--sheet);
+  font-size:clamp(1.45rem,3.2vw,2.1rem);white-space:nowrap;line-height:1.25;
+}
+.formula-box .nab{font-size:1.1em;font-weight:600}
+.nabla-fig{grid-area:fig;margin:0;display:grid;justify-items:center;gap:12px;max-width:248px}
+.harp{width:clamp(124px,14vw,168px);height:auto;display:block;touch-action:none;cursor:pointer;overflow:visible}
+.harp-frame{fill:var(--ink)}
+.string{stroke:var(--brass-2);stroke-width:.9;stroke-linecap:round;transition:stroke .5s}
+.string.lit{stroke:var(--amber);stroke-width:1.25;transition:none}
+.nabla-fig figcaption{font-size:.94rem;line-height:1.45;color:var(--ink-2);border:1px solid var(--rule);border-radius:10px;padding:10px 13px 11px;background:var(--sheet)}
+.nabla-fig strong{color:var(--ink);font-weight:600}
+@media (max-width:760px){
+  .masthead{grid-template-columns:minmax(0,1fr);grid-template-areas:"text" "fig"}
+  .nabla-fig{grid-template-columns:auto minmax(0,1fr);max-width:none;justify-items:start;align-items:center;gap:16px}
+  .harp{width:104px}
+}
+
+/* ——— lab ——— */
+.lab{padding:clamp(24px,4vw,40px) 0 clamp(30px,5vw,52px)}
+.lab-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 32px;align-items:baseline;margin-bottom:16px}
+.lab-head h2,.history h2{font-family:var(--display);font-weight:700;font-size:clamp(1.55rem,3vw,2.15rem);line-height:1.1;margin:0}
+.lab-head p{margin:0;color:var(--ink-2);max-width:68ch;line-height:1.7}
+.lab-head .inline-formula{color:var(--ink);font-size:1.08em;white-space:nowrap}
+@media (max-width:860px){.lab-head{grid-template-columns:minmax(0,1fr)}}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1.5px solid var(--ink);border-radius:12px;overflow:hidden;margin-bottom:16px;background:var(--sheet)}
+.tab{
+  appearance:none;border:0;border-left:1.5px solid var(--ink);background:transparent;cursor:pointer;
+  padding:10px 16px 11px;text-align:left;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;align-items:center;
+}
+.tab:first-child{border-left:0}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--vellum)}
+.tab:not([aria-selected="true"]):hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.tab:focus-visible{outline-offset:-5px}
+.t-sym{grid-row:span 2;font-size:1.9rem;line-height:1;min-width:2.2em;text-align:center;color:var(--rubric);font-weight:600}
+.tab[aria-selected="true"] .t-sym{color:var(--rubric-on-ink)}
+.t-name{font-family:var(--display);font-weight:700;font-size:1.18rem;line-height:1.15}
+.t-cap{font-size:.88rem;line-height:1.3;opacity:.82}
+@media (max-width:640px){
+  .tab{grid-template-columns:minmax(0,1fr);text-align:center;padding:8px 4px 9px;row-gap:3px}
+  .t-sym{grid-row:auto;font-size:1.45rem;min-width:0}
+  .t-name{font-size:1rem}
+  .t-cap{display:none}
+}
+.lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px 24px;align-items:start}
+@media (max-width:980px){.lab-grid{grid-template-columns:minmax(0,1fr)}}
+.stage{min-width:0}
+.canvas-wrap{
+  position:relative;width:100%;aspect-ratio:4/3;max-height:76vh;min-height:300px;
+  border:1.5px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--sheet);
+}
+@media (max-width:640px){.canvas-wrap{aspect-ratio:1/1;max-height:66vh}}
+#view{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+#view:focus-visible{outline:none}
+.canvas-wrap:has(#view:focus-visible){outline:2px solid var(--focus);outline-offset:3px}
+.hint{
+  position:absolute;left:10px;top:10px;margin:0;max-width:calc(100% - 78px);pointer-events:none;
+  font-size:.93rem;line-height:1.35;padding:5px 10px 6px;border-radius:8px;
+  background:color-mix(in srgb,var(--sheet) 92%,transparent);border:1px solid var(--rule);color:var(--ink-2);
+  transition:opacity .5s;
+}
+.hint.is-hidden{opacity:0}
+.legend{
+  position:absolute;left:10px;bottom:10px;display:grid;grid-template-columns:auto minmax(130px,auto);column-gap:9px;row-gap:3px;align-items:center;
+  padding:6px 11px 6px 10px;border-radius:9px;pointer-events:none;
+  background:color-mix(in srgb,var(--sheet) 92%,transparent);border:1px solid var(--rule);color:var(--ink-2);
+}
+.lg-sym{grid-row:1 / span 2;font-size:1.15rem}
+.lg-bar{grid-column:2;height:9px;border-radius:5px;background:linear-gradient(90deg,var(--heat-neg),var(--sheet) 50%,var(--heat-pos));border:1px solid color-mix(in srgb,var(--ink) 25%,transparent)}
+.lg-caps{grid-column:2;display:flex;justify-content:space-between;gap:14px;font-size:.78rem;line-height:1.1}
+.legend.is-off{display:none}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.zbtn{
+  appearance:none;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;
+  border:1px solid var(--rule);border-radius:10px;background:color-mix(in srgb,var(--sheet) 94%,transparent);
+  font-size:1.45rem;line-height:1;color:var(--ink);padding:0;
+}
+.zbtn:hover:not(:disabled){border-color:var(--ink-3)}
+.zbtn:disabled{opacity:.4;cursor:default}
+.zbtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.zlevel{font-size:.8rem;line-height:1;padding:3px 6px 4px;border-radius:6px;font-variant-numeric:tabular-nums;color:var(--ink-2);background:color-mix(in srgb,var(--sheet) 92%,transparent);border:1px solid var(--rule)}
+.ztip{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;max-width:80%;text-align:center;
+  padding:9px 15px 10px;border-radius:10px;background:var(--ink);color:var(--sheet);font-size:.98rem;line-height:1.35;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.ztip.show{opacity:.94}
+
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:12px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--sheet)}
+.seg-btn{appearance:none;border:0;border-left:1px solid var(--rule);background:transparent;padding:7px 13px;min-height:40px;cursor:pointer;font-size:.97rem;white-space:nowrap}
+.seg-btn:first-child{border-left:0}
+.seg-btn[aria-pressed="true"]{background:var(--ink);color:var(--sheet)}
+.btn{
+  appearance:none;border:1px solid var(--rule);background:var(--sheet);border-radius:10px;
+  padding:7px 14px;min-height:40px;cursor:pointer;font-size:.97rem;white-space:nowrap;
+}
+.btn:hover:not(:disabled),.seg-btn:hover:not([aria-pressed="true"]){border-color:var(--ink-3)}
+.btn:disabled{opacity:.42;cursor:default}
+.tb-group{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tb-loop label{font-size:.95rem;color:var(--ink-2);white-space:nowrap}
+.tb-loop output,.speed output{font-variant-numeric:tabular-nums;color:var(--ink);display:inline-block;min-width:2.8em}
+input[type="range"]{accent-color:var(--brass);width:150px;max-width:100%}
+@media (max-width:560px){
+  .seg{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none}
+  .seg-btn{padding:6px 10px;font-size:.9rem;min-height:40px}
+  .hint{font-size:.84rem}
+  .zbtn{width:36px;height:36px}
+}
+.lab[data-mode="gradient"] .vec-only{display:none}
+.lab:not([data-mode="gradient"]) .scalar-only{display:none}
+
+/* panel */
+.panel{display:flex;flex-direction:column;gap:20px;min-width:0}
+.plate{
+  border:1px solid var(--brass);border-radius:12px;background:var(--sheet);padding:15px 17px 16px;
+  box-shadow:inset 0 0 0 3px var(--sheet),inset 0 0 0 4px color-mix(in srgb,var(--brass) 42%,transparent);
+}
+.ro-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.93rem;padding:2px 11px 3px;border-radius:999px;border:1.5px solid currentColor;white-space:nowrap}
+.badge[data-tone="pos"]{color:var(--amber)}
+.badge[data-tone="neg"]{color:var(--verdigris)}
+.badge[data-tone="zero"]{color:var(--ink-2)}
+.ro-pos{color:var(--ink-3);font-size:.9rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ro-status{margin:0 0 10px;font-size:.98rem;line-height:1.45;color:var(--ink-2);min-height:2.9em}
+.ro-vec{
+  margin:0 0 12px;padding:7px 11px 8px;border-radius:8px;border-left:3px solid var(--rubric);
+  background:color-mix(in srgb,var(--rubric) 7%,var(--sheet));font-size:1.12rem;line-height:1.5;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow-x:auto;
+}
+.ro-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;margin:0;font-variant-numeric:tabular-nums lining-nums;align-items:baseline}
+.ro-grid dt{color:var(--ink-2)}
+.ro-grid dd{margin:0;text-align:right;white-space:nowrap}
+.ro-grid .key{font-size:1.18rem;font-weight:600;color:var(--ink)}
+.ro-sub{border-top:1px solid var(--rule);margin-top:12px;padding-top:11px}
+.ro-sub h4{margin:0 0 6px;font-size:.98rem;font-weight:600}
+.ro-foot{margin:9px 0 0;font-size:.88rem;line-height:1.5;color:var(--ink-3)}
+.pgroup h3{margin:0 0 9px;font-family:var(--display);font-weight:700;font-size:1.12rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--rule);background:var(--sheet);border-radius:999px;padding:5px 13px 6px;cursor:pointer;font-size:.96rem}
+.chip:hover:not([aria-pressed="true"]){border-color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--brass-2);border-color:var(--brass-2);color:var(--on-brass);font-weight:600}
+.note{margin:11px 0 0;color:var(--ink-2);font-size:.97rem;line-height:1.55}
+.note .fx{display:block;margin-bottom:4px;font-size:1.05rem}
+.note .edited{display:block;margin-top:6px;color:var(--ink-3);font-size:.9rem}
+.toggles{display:flex;flex-wrap:wrap;gap:6px}
+.tg{position:relative;display:inline-flex}
+.tg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.tg span{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:999px;padding:5px 13px 6px 10px;font-size:.96rem;background:var(--sheet)}
+.tg span::before{content:"";width:12px;height:12px;border:1.5px solid var(--ink-3);border-radius:3px;flex:none}
+.tg input:checked+span{border-color:var(--ink-3)}
+.tg input:checked+span::before{background:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--sheet)}
+.tg input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+.speed{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:12px}
+.speed label{font-size:.95rem;color:var(--ink-2)}
+
+/* ——— history ——— */
+.history{padding:clamp(30px,5vw,58px) 0 clamp(26px,4vw,44px);border-top:1px solid var(--rule)}
+.hist-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px clamp(24px,5vw,60px);align-items:center}
+.hist-copy p{margin:.6em 0 0;color:var(--ink-2);max-width:56ch}
+.year-ctl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;margin-top:22px;max-width:640px}
+#year-out{font-family:var(--display);font-weight:700;font-size:clamp(2.2rem,4.6vw,3.2rem);line-height:1;font-variant-numeric:tabular-nums;min-width:3.1ch}
+.year-track{position:relative;padding-bottom:22px}
+.year-track input{width:100%}
+.year-ticks{position:absolute;left:0;right:0;bottom:0;height:18px}
+.year-ticks span{position:absolute;left:calc(var(--p) * (100% - 16px) + 8px);transform:translateX(-50%);font-size:.8rem;color:var(--ink-3);white-space:nowrap}
+.year-ticks span:first-child{transform:none;left:0}
+.year-ticks span:last-child{transform:none;left:auto;right:0}
+@media (max-width:520px){.year-ticks span:nth-child(2){display:none}}
+.morph{margin:0;display:grid;justify-items:center;gap:6px;width:clamp(150px,18vw,200px)}
+.morph svg{width:100%;height:auto;overflow:visible}
+.morph path{fill:var(--ink)}
+.morph figcaption{font-size:.92rem;line-height:1.35;color:var(--ink-2);text-align:center;min-height:2.7em}
+@media (max-width:720px){.hist-top{grid-template-columns:minmax(0,1fr)}.morph{justify-self:center}}
+.eras{list-style:none;margin:30px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:relative}
+.eras::before{content:"";position:absolute;left:0;right:0;top:8px;height:2px;background:var(--brass)}
+.era{position:relative;padding:30px 18px 6px;border-left:1px solid var(--rule);display:flex;flex-direction:column;align-items:flex-start}
+.era:first-child{border-left:0;padding-left:2px}
+.era::before{content:"";position:absolute;top:1px;left:18px;width:16px;height:16px;border-radius:50%;background:var(--vellum);border:2px solid var(--brass);transition:background .3s}
+.era:first-child::before{left:2px}
+.era.is-active::before{background:var(--brass)}
+.era-pick{appearance:none;border:0;background:none;padding:0;cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.32rem;line-height:1.1;text-align:left}
+.era-pick:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.era h3{margin:2px 0 6px;font-size:1.02rem;font-weight:600;line-height:1.25}
+.era p{margin:0;font-size:.95rem;line-height:1.45;color:var(--ink-2)}
+.era .era-sym{font-size:1.8rem;line-height:1.2;color:var(--rubric);font-weight:600;margin:12px 0 10px;min-height:1.25em}
+.era .btn{margin-top:auto;font-size:.92rem;padding:6px 12px;min-height:36px}
+.era.is-active .era-pick{color:var(--brass)}
+@media (max-width:940px){
+  .eras{grid-template-columns:minmax(0,1fr)}
+  .eras::before{left:8px;right:auto;top:6px;bottom:6px;width:2px;height:auto}
+  .era,.era:first-child{border-left:0;padding:0 0 26px 40px}
+  .era::before,.era:first-child::before{left:1px;top:4px}
+  .era .btn{margin-top:4px}
+  .era .era-sym{margin:8px 0}
+}
+.foot{border-top:1px solid var(--rule);padding:22px 0 34px;color:var(--ink-3);font-size:.9rem;line-height:1.5}
+.foot p{margin:0 0 6px;max-width:92ch}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="mast-text">
+    <h1 class="title">The del operator, simulated</h1>
+    <p class="sub">From quaternions to the language of fields. Push the fields around below and watch one operator do three different jobs.</p>
+    <div class="formula-box" role="img" aria-label="del equals partial by partial x times x-hat, plus partial by partial y times y-hat, plus partial by partial z times z-hat">
+      <span class="nab">∇</span><span>=</span>
+      <span class="term"><span class="frac"><span>∂</span><span>∂<i>x</i></span></span><svg class="uvs" viewBox="0 0 13 28" aria-hidden="true"><text x="6.5" y="22">x</text><path d="M3.3 9.4 6.5 6.1 9.7 9.4"/></svg></span>
+      <span>+</span>
+      <span class="term"><span class="frac"><span>∂</span><span>∂<i>y</i></span></span><svg class="uvs" viewBox="0 0 13 28" aria-hidden="true"><text x="6.5" y="22">y</text><path d="M3.3 9.4 6.5 6.1 9.7 9.4"/></svg></span>
+      <span>+</span>
+      <span class="term"><span class="frac"><span>∂</span><span>∂<i>z</i></span></span><svg class="uvs" viewBox="0 0 13 28" aria-hidden="true"><text x="6.5" y="22">z</text><path d="M3.3 9.4 6.5 6.1 9.7 9.4"/></svg></span>
+    </div>
+  </div>
+  <figure class="nabla-fig">
+    <svg id="harp" class="harp" viewBox="0 0 120 110" role="button" tabindex="0" aria-label="A nabla strung like a harp. Drag across the strings, or press Enter to strum.">
+      <path class="harp-frame" d="M6 8H114L60 102Z M33.65 22L66.34 78.91L99.04 22Z" fill-rule="evenodd"/>
+      <g id="harp-strings"></g>
+    </svg>
+    <figcaption><strong>Why “nabla”?</strong> William Robertson Smith suggested the name to Tait because the symbol looks like an ancient harp. This one is strung, so drag across it.</figcaption>
+  </figure>
+</header>
+
+<section class="lab" id="lab" data-mode="gradient" aria-labelledby="lab-title">
+  <div class="lab-head">
+    <h2 id="lab-title">One operator, three actions</h2>
+    <p>In the plane, <span class="inline-formula">∇ = <span class="term"><span class="frac sm"><span>∂</span><span>∂<i>x</i></span></span><svg class="uvs" viewBox="0 0 13 28" role="img" aria-label="x-hat"><text x="6.5" y="22">x</text><path d="M3.3 9.4 6.5 6.1 9.7 9.4"/></svg></span> + <span class="term"><span class="frac sm"><span>∂</span><span>∂<i>y</i></span></span><svg class="uvs" viewBox="0 0 13 28" role="img" aria-label="y-hat"><text x="6.5" y="22">y</text><path d="M3.3 9.4 6.5 6.1 9.7 9.4"/></svg></span></span>. Aim it at a height map and it points uphill. Dot it with a flow and it measures outflow. Cross it with a flow and it measures spin.</p>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="What ∇ does">
+    <button class="tab" role="tab" id="tab-gradient" data-mode="gradient" aria-controls="lab-panel" aria-selected="true">
+      <span class="t-sym">∇<i>f</i></span><span class="t-name">Gradient</span><span class="t-cap">Points toward steepest increase</span>
+    </button>
+    <button class="tab" role="tab" id="tab-divergence" data-mode="divergence" aria-controls="lab-panel" aria-selected="false" tabindex="-1">
+      <span class="t-sym">∇·<i>F</i></span><span class="t-name">Divergence</span><span class="t-cap">Net outflow from a point</span>
+    </button>
+    <button class="tab" role="tab" id="tab-curl" data-mode="curl" aria-controls="lab-panel" aria-selected="false" tabindex="-1">
+      <span class="t-sym">∇×<i>F</i></span><span class="t-name">Curl</span><span class="t-cap">Local rotation of a flow</span>
+    </button>
+  </div>
+
+  <div class="lab-grid" id="lab-panel" role="tabpanel" aria-labelledby="tab-gradient">
+    <div class="stage">
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="view" tabindex="0" aria-label="Field simulation. Drag the probe to explore, drag empty space to pan, pinch to zoom. With the canvas focused, arrow keys move the probe, plus and minus zoom, 0 resets the view, and the bracket keys resize the loop."></canvas>
+        <p class="hint" id="hint"></p>
+        <div class="zoom" role="group" aria-label="Zoom the graph">
+          <button type="button" class="zbtn" id="zin" aria-label="Zoom in" title="Zoom in (+)">+</button>
+          <button type="button" class="zbtn" id="zout" aria-label="Zoom out" title="Zoom out (−)">−</button>
+          <button type="button" class="zbtn" id="zfit" aria-label="Reset view" title="Reset view (0)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"/></svg></button>
+          <span class="zlevel" id="zlevel">1.0×</span>
+        </div>
+        <p class="ztip" id="ztip" role="status">Pinch, or hold Ctrl and scroll, to zoom the graph</p>
+        <div class="legend" id="legend" aria-hidden="true">
+          <span class="lg-sym m" id="lg-sym"></span>
+          <span class="lg-bar"></span>
+          <span class="lg-caps"><span id="lg-l">low</span><span id="lg-r">high</span></span>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="seg" id="tools" role="group" aria-label="What a tap on the canvas does"></div>
+        <div class="tb-group">
+          <button type="button" class="btn" id="undo">Undo</button>
+          <button type="button" class="btn" id="reset">Reset</button>
+        </div>
+        <div class="tb-group tb-loop vec-only">
+          <label for="radius">Loop radius <output id="radius-out">0.60</output></label>
+          <input type="range" id="radius" min="0" max="1000" step="1" value="600">
+          <button type="button" class="btn" id="dye">Release dye</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="panel" aria-label="Readings and settings">
+      <section class="plate" id="readout"></section>
+      <section class="pgroup">
+        <h3>Field</h3>
+        <div class="chips" id="presets" role="group" aria-label="Choose a field"></div>
+        <p class="note" id="note"></p>
+      </section>
+      <section class="pgroup">
+        <h3>Show</h3>
+        <div class="toggles">
+          <label class="tg"><input type="checkbox" data-show="heat"><span id="heat-label">Color by height</span></label>
+          <label class="tg scalar-only"><input type="checkbox" data-show="contours"><span>Level curves</span></label>
+          <label class="tg"><input type="checkbox" data-show="arrows"><span>Arrows</span></label>
+          <label class="tg"><input type="checkbox" data-show="flow"><span>Moving tracers</span></label>
+        </div>
+        <div class="speed">
+          <label for="speed">Speed</label>
+          <input type="range" id="speed" min="0.25" max="3" step="0.05" value="1">
+          <output id="speed-out" for="speed">1×</output>
+          <button type="button" class="btn" id="pause">Pause</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+</section>
+
+<section class="history" aria-labelledby="hist-title">
+  <div class="hist-top">
+    <div class="hist-copy">
+      <h2 id="hist-title">How ▷ turned into ∇</h2>
+      <p>Drag through the years. Hamilton’s sideways triangle swings upright in Tait’s hands, then picks up two names along the way.</p>
+      <div class="year-ctl">
+        <output id="year-out" for="year">1846</output>
+        <div class="year-track">
+          <input type="range" id="year" min="1846" max="1901" step="1" value="1846" aria-label="Year">
+          <div class="year-ticks" aria-hidden="true">
+            <span style="--p:0">1846</span><span style="--p:.127">1853</span><span style="--p:.382">1867</span><span style="--p:.618">late 1800s</span><span style="--p:1">1901</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figure class="morph">
+      <svg viewBox="-14 -18 148 146" role="img" aria-labelledby="morph-name">
+        <g id="morph-g" transform="rotate(-90 60 55)"><path d="M6 8H114L60 102Z M33.65 22L66.34 78.91L99.04 22Z" fill-rule="evenodd"/></g>
+      </svg>
+      <figcaption id="morph-name">A sideways triangle: Hamilton’s operator</figcaption>
+    </figure>
+  </div>
+
+  <ol class="eras">
+    <li class="era is-active" data-year="1846">
+      <button type="button" class="era-pick" data-year="1846">1846</button>
+      <h3>Hamilton’s operator</h3>
+      <p>William Rowan Hamilton writes a vector differential operator into his work on quaternions, drawn as a sideways triangle. Quaternions turned out to be a natural language for rotation.</p>
+      <p class="era-sym" aria-hidden="true">▷</p>
+      <button type="button" class="btn" data-open data-mode="curl" data-preset="rotate" data-hint="On a turntable the spin is the same everywhere. Drag the paddle wheel far from the center and it still turns at the same rate.">Try a rotation</button>
+    </li>
+    <li class="era" data-year="1853">
+      <button type="button" class="era-pick" data-year="1853">1853</button>
+      <h3>Quaternions in print</h3>
+      <p>Hamilton’s <i>Lectures on Quaternions</i> works out what the operator does to scalar and to vector quantities.</p>
+      <p class="era-sym" aria-hidden="true">▷<i>f</i>(<i>q</i>)</p>
+      <button type="button" class="btn" data-open data-mode="gradient" data-preset="hill" data-hint="∇ acting on a scalar: the orange arrow is ∇f, and the dashed line climbs by always following it.">Apply it to a hill</button>
+    </li>
+    <li class="era" data-year="1867">
+      <button type="button" class="era-pick" data-year="1867">1867</button>
+      <h3>The familiar ∇</h3>
+      <p>Peter Guthrie Tait’s quaternion treatise helps establish the inverted triangle we still write today.</p>
+      <p class="era-sym" aria-hidden="true">∇</p>
+      <button type="button" class="btn" data-open data-mode="divergence" data-preset="dipole" data-hint="Flow runs from the source to the sink. Slide the loop into the gap between them and the net outflow drops to zero.">Map a source and sink</button>
+    </li>
+    <li class="era" data-year="1880">
+      <button type="button" class="era-pick" data-year="1880">Late 1800s</button>
+      <h3>A language for fields</h3>
+      <p>Maxwell, Gibbs and Heaviside carry these operators into physics and modern vector analysis. Maxwell proposes the name “curl” in 1871.</p>
+      <p class="era-sym" aria-hidden="true">∇· &nbsp;∇×</p>
+      <button type="button" class="btn" data-open data-mode="curl" data-preset="whirl" data-probe="0.7,0.4" data-r="1.6" data-hint="There’s no spin at the hub, yet any loop around the wire catches the same circulation, 2π. That’s Ampère’s law in miniature.">Loop around a wire</button>
+    </li>
+    <li class="era" data-year="1901">
+      <button type="button" class="era-pick" data-year="1901">1901</button>
+      <h3>“Del” gets a textbook</h3>
+      <p>Edwin B. Wilson’s <i>Vector Analysis</i>, built from Gibbs’s lectures, promotes the name “del”.</p>
+      <p class="era-sym" aria-hidden="true">del</p>
+      <button type="button" class="btn" data-open data-mode="divergence" data-preset="drain" data-hint="Here the drain reads as negative divergence. Open the Curl tab and pick Drain to read its spin.">Read a drain both ways</button>
+    </li>
+  </ol>
+</section>
+
+<footer class="foot">
+  <p>Adapted from the infographic “History of the Del Operator” by @eeanimation, which cites Hamilton (1853), Tait (1867), Wilson (1901) and the MacTutor History of Mathematics archive.</p>
+  <p>The lab works in the <i>xy</i>-plane, so a planar field’s curl points straight out of the page, along ẑ. Every number is computed live as you drag: derivatives by central differences, loop and area integrals by numerical quadrature. With the canvas focused, arrow keys move the probe (hold Shift for bigger steps), + and − zoom, 0 resets the view, and [ and ] resize the loop.</p>
+</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ───────── helpers ───────── */
+const TAU = Math.PI * 2, MINUS = '\u2212';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+const MATHFONT = "'STIX Two Text','Cambria Math','Times New Roman',serif";
+
+function fmt(v, d = 2) {
+  if (!Number.isFinite(v)) return '—';
+  if (Math.abs(v) < 0.5 * Math.pow(10, -d)) v = 0;
+  return v.toFixed(d).replace('-', MINUS);
+}
+const fmtP = (v, d = 2) => { const s = fmt(v, d); return s[0] === MINUS ? '(' + s + ')' : s; };
+const fmt3 = v => fmt(v, Math.abs(v) >= 100 ? 1 : Math.abs(v) >= 10 ? 2 : 3);
+const fmtR = r => fmt(r, r < 0.1 ? 3 : 2);
+const fmtTick = (v, step) => fmt(v, step >= 1 ? 0 : Math.max(0, Math.round(-Math.log10(step) + 0.49)));
+
+/* ───────── notation snippets ───────── */
+const M = h => `<span class="m">${h}</span>`;
+const uvSVG = l => `<svg class="uvs" viewBox="0 0 13 28" role="img" aria-label="${l}-hat"><text x="6.5" y="22">${l}</text><path d="M3.3 9.4 6.5 6.1 9.7 9.4"/></svg>`;
+const UV = { x: uvSVG('x'), y: uvSVG('y'), z: uvSVG('z') };
+const N = { grad: '∇<i>f</i>', div: '∇·<i>F</i>', curl: '∇×<i>F</i>', curlz: `(∇×<i>F</i>)·${UV.z}` };
+function vecHTML(a, b) {
+  const as = fmt(a), bs = fmt(b), neg = bs[0] === MINUS;
+  return `${as}&#8201;${UV.x} ${neg ? MINUS : '+'} ${neg ? bs.slice(1) : bs}&#8201;${UV.y}`;
+}
+
+/* ───────── field library ───────── */
+const SCALAR = {
+  hill: { label: 'Hill', els: [{ t: 'hill', x: 0, y: 0, A: 1, sx: 1.45, sy: 0.95 }], probe: [1.35, 0.8],
+    note: `One summit with oval level curves. Every ${M(N.grad)} arrow points toward the top and crosses each level curve at a right angle.` },
+  twin: { label: 'Twin peaks', els: [{ t: 'hill', x: -1.25, y: 0.4, A: 1, sx: 0.8, sy: 0.8 }, { t: 'hill', x: 1.3, y: -0.45, A: 0.72, sx: 0.85, sy: 0.85 }], probe: [0.25, 1.15],
+    note: `Two summits with a saddle between them. Find the spot where ${M(N.grad + ' = 0')} but you’re at neither a top nor a bottom.` },
+  saddle: { label: 'Saddle', base: 'saddle', probe: [0.9, 0.55], fx: '<i>f</i> = 0.13(<i>x</i>² − <i>y</i>²)',
+    note: 'Uphill along one axis, downhill along the other. The center is a critical point that isn’t a peak.' },
+  ripples: { label: 'Ripples', base: 'ripples', probe: [1.1, 0.6], fx: '<i>f</i> = cos(1.7<i>r</i>) e<sup>−<i>r</i>²/10</sup>',
+    note: `Rings of ridges and troughs. Cross a ring and ${M(N.grad)} flips between pointing inward and pointing outward.` },
+  plane: { label: 'Slope', base: 'plane', probe: [-0.8, -0.5], fx: '<i>f</i> = 0.22<i>x</i> + 0.14<i>y</i>',
+    note: `A tilted plane. ${M(N.grad + ' = 0.22' + UV.x + ' + 0.14' + UV.y)} everywhere, and the level curves are straight, evenly spaced lines.` },
+};
+const VECTOR = {
+  source: { label: 'Source', els: [{ t: 'source', x: 0, y: 0 }], probe: [0, 0], r: 0.9,
+    note: 'Flow pours out of a small core. Drag the loop off it: with no source inside, as much flows in as out, and the net outflow drops to zero.' },
+  sink: { label: 'Sink', els: [{ t: 'sink', x: 0, y: 0 }], probe: [0, 0], r: 0.9,
+    note: `Flow drains into the core, so any loop around it has a negative net outflow and ${M(N.div + ' < 0')} there.` },
+  dipole: { label: 'Dipole', els: [{ t: 'source', x: -1.3, y: 0 }, { t: 'sink', x: 1.3, y: 0 }], probe: [-1.3, 0], r: 0.6,
+    note: 'A source and a sink, like the field-line sketches of Tait’s era. Outflow at one end, inflow at the other, balance in between.' },
+  expand: { label: 'Expansion', base: 'expand', probe: [0.8, 0.6], r: 0.6, fx: `<i>F</i> = 0.35<i>x</i>${UV.x} + 0.35<i>y</i>${UV.y}`,
+    note: `Every point is a little source: ${M(N.div + ' = 0.70')} everywhere, so a loop’s outflow grows with its area.` },
+  accel: { label: 'Speed-up', base: 'accel', probe: [0, 0.4], r: 0.7, fx: `<i>F</i> = 0.45e<sup><i>x</i>/2.5</sup>${UV.x}`,
+    note: `The arrows are all parallel, yet ${M(N.div + ' > 0')}. The flow speeds up, so each loop sheds more on its right than it takes in on its left.` },
+  squeeze: { label: 'Squeeze', base: 'squeeze', probe: [0.9, 0.7], r: 0.6, fx: `<i>F</i> = 0.35<i>x</i>${UV.x} − 0.35<i>y</i>${UV.y}`,
+    note: `Arrows crowd toward the x-axis, yet ${M(N.div + ' = 0')}: squeezing in one direction is exactly balanced by stretching in the other.`,
+    noteC: `A hyperbolic flow with no spin. ${M(N.curl + ' = 0')}, so the paddle wheel stays still wherever you put it.` },
+  wind: { label: 'Wind', base: 'wind', probe: [0.5, 0.5], r: 0.6, fx: `<i>F</i> = 0.75${UV.x} + 0.22${UV.y}`,
+    note: 'A steady breeze. No sources and no spin: divergence and curl are both zero everywhere.' },
+  rotate: { label: 'Turntable', base: 'rotate', probe: [0, 0], r: 0.7, fx: `<i>F</i> = −0.4<i>y</i>${UV.x} + 0.4<i>x</i>${UV.y}`,
+    note: `Rigid rotation. ${M(N.curl + ' = 0.80' + UV.z)} everywhere, so the paddle wheel turns at the same rate wherever you drag it, even far from the center.` },
+  whirl: { label: 'Whirlpool', els: [{ t: 'ccw', x: 0, y: 0, a: 0.25 }], probe: [1.35, 0.7], r: 0.45,
+    note: `Fluid circles the core, yet away from it ${M(N.curl + ' = 0')} and the paddle wheel stays still. It’s the shape of the magnetic field around a wire.`,
+    noteD: `Pure swirl: fluid circles the core, but none is created or drained, so ${M(N.div + ' = 0')} and every loop’s net outflow is zero.` },
+  shear: { label: 'Shear', base: 'shear', probe: [0.5, 0.8], r: 0.6, fx: `<i>F</i> = 0.35<i>y</i>${UV.x}`,
+    note: `Straight, parallel flow, yet ${M(N.curl + ' ≠ 0')}. The upper layers slide right and the lower ones slide left, so the paddle wheel turns clockwise.` },
+  vpair: { label: 'Vortex pair', els: [{ t: 'ccw', x: -1.1, y: 0 }, { t: 'cw', x: 1.1, y: 0 }], probe: [-1.1, 0], r: 0.6,
+    note: 'Two opposite whirls. Between them the flow runs straight through; the spin lives only in the cores.' },
+  drain: { label: 'Drain', els: [{ t: 'sink', x: 0, y: 0, g: 'drain' }, { t: 'ccw', x: 0, y: 0, g: 'drain' }], probe: [0, 0], r: 0.8,
+    note: 'Water swirling down a drain: negative divergence and positive curl, both packed into the core. Check it in both tabs.' },
+};
+const STAMPS = {
+  hill: { t: 'hill', A: 0.8, sx: 0.7 }, valley: { t: 'valley', A: -0.8, sx: 0.7 },
+  source: { t: 'source', a: 0.28 }, sink: { t: 'sink', a: 0.28 }, ccw: { t: 'ccw', a: 0.28 }, cw: { t: 'cw', a: 0.28 },
+};
+const STAMP_NAMES = { hill: 'a hill', valley: 'a valley', source: 'a source', sink: 'a sink', ccw: 'a counterclockwise swirl', cw: 'a clockwise swirl' };
+const TOOLS = {
+  scalar: [['probe', 'Probe', 'Tap to move the probe'], ['hill', '▲ Hill', 'Tap the map to raise a hill'], ['valley', '▼ Valley', 'Tap the map to dig a valley']],
+  vector: [['probe', 'Probe', 'Tap to move the loop'], ['source', '⊕ Source', 'Tap to add a source'], ['sink', '⊖ Sink', 'Tap to add a sink'],
+    ['ccw', '↺ Swirl', 'Tap to add a counterclockwise swirl'], ['cw', '↻ Swirl', 'Tap to add a clockwise swirl']],
+};
+const MAX_ELS = 14, ZMIN = 0.4, ZMAX = 8, RMIN = 0.04, RMAX = 3, PAN_LIMIT = 15;
+
+function makeEl(spec) {
+  const e = Object.assign({ x: 0, y: 0 }, spec);
+  if (e.t === 'hill' || e.t === 'valley') {
+    if (e.A == null) e.A = e.t === 'hill' ? 0.8 : -0.8;
+    e.sx = e.sx || 0.7; e.sy = e.sy || e.sx;
+  } else {
+    e.kind = (e.t === 'source' || e.t === 'sink') ? 0 : 1;
+    e.s = (e.t === 'source' || e.t === 'ccw') ? 1 : -1;
+    e.a = e.a || 0.3; e.ia2 = 1 / (e.a * e.a);
+  }
+  return e;
+}
+
+/* Scalar field f and its exact gradient. */
+function scalarEval(S, x, y, out) {
+  let f = 0, fx = 0, fy = 0;
+  switch (S.base) {
+    case 'saddle': f = 0.13 * (x * x - y * y); fx = 0.26 * x; fy = -0.26 * y; break;
+    case 'ripples': {
+      const r = Math.sqrt(x * x + y * y), k = 1.7, b = 10, e = Math.exp(-r * r / b), c = Math.cos(k * r);
+      f = c * e;
+      if (r > 1e-9) { const dr = (-k * Math.sin(k * r) - (2 * r / b) * c) * e; fx = dr * x / r; fy = dr * y / r; }
+      break;
+    }
+    case 'plane': f = 0.22 * x + 0.14 * y; fx = 0.22; fy = 0.14; break;
+  }
+  const els = S.els;
+  for (let i = 0; i < els.length; i++) {
+    const e = els[i], dx = x - e.x, dy = y - e.y, ix = 1 / (e.sx * e.sx), iy = 1 / (e.sy * e.sy);
+    const g = e.A * Math.exp(-0.5 * (dx * dx * ix + dy * dy * iy));
+    f += g; fx -= g * dx * ix; fy -= g * dy * iy;
+  }
+  out[0] = f; out[1] = fx; out[2] = fy;
+  return out;
+}
+
+/* Vector field F = P x̂ + Q ŷ. Point sources and swirls have smooth Gaussian cores,
+   so their divergence or curl is a compact bump that is zero in practice outside it. */
+function vecEval(S, x, y, out) {
+  let P = 0, Q = 0;
+  switch (S.base) {
+    case 'expand': P = 0.35 * x; Q = 0.35 * y; break;
+    case 'accel': P = 0.45 * Math.exp(x / 2.5); break;
+    case 'squeeze': P = 0.35 * x; Q = -0.35 * y; break;
+    case 'wind': P = 0.75; Q = 0.22; break;
+    case 'rotate': P = -0.4 * y; Q = 0.4 * x; break;
+    case 'shear': P = 0.35 * y; break;
+  }
+  const els = S.els;
+  for (let i = 0; i < els.length; i++) {
+    const e = els[i], dx = x - e.x, dy = y - e.y, r2 = dx * dx + dy * dy, u = r2 * e.ia2;
+    const k = u < 1e-8 ? e.s * e.ia2 * (1 - 0.5 * u) : -e.s * Math.expm1(-u) / r2;
+    if (e.kind === 0) { P += k * dx; Q += k * dy; } else { P -= k * dy; Q += k * dx; }
+  }
+  out[0] = P; out[1] = Q;
+  return out;
+}
+
+const HD = 1e-4;
+const _a = new Float64Array(2), _b = new Float64Array(2), _c = new Float64Array(2), _d = new Float64Array(2);
+/* out = [div, curl_z, ∂P/∂x, ∂Q/∂y, ∂Q/∂x, ∂P/∂y] by central differences */
+function divCurl(S, x, y, out) {
+  vecEval(S, x + HD, y, _a); vecEval(S, x - HD, y, _b);
+  vecEval(S, x, y + HD, _c); vecEval(S, x, y - HD, _d);
+  const k = 1 / (2 * HD);
+  const Px = (_a[0] - _b[0]) * k, Qx = (_a[1] - _b[1]) * k, Py = (_c[0] - _d[0]) * k, Qy = (_c[1] - _d[1]) * k;
+  out[0] = Px + Qy; out[1] = Qx - Py; out[2] = Px; out[3] = Qy; out[4] = Qx; out[5] = Py;
+  return out;
+}
+
+const t2 = new Float64Array(2), t3 = new Float64Array(3), dc = new Float64Array(6), k1 = new Float64Array(2), k2 = new Float64Array(2);
+function sampleField(S, x, y, out) {
+  if (S.kind === 'scalar') { scalarEval(S, x, y, t3); out[0] = t3[1]; out[1] = t3[2]; }
+  else vecEval(S, x, y, out);
+  return out;
+}
+
+function gaussLegendre(n) {
+  const x = new Float64Array(n), w = new Float64Array(n), m = (n + 1) >> 1;
+  for (let i = 0; i < m; i++) {
+    let z = Math.cos(Math.PI * (i + 0.75) / (n + 0.5)), z1, pp;
+    do {
+      let p1 = 1, p2 = 0;
+      for (let j = 1; j <= n; j++) { const p3 = p2; p2 = p1; p1 = ((2 * j - 1) * z * p2 - (j - 1) * p3) / j; }
+      pp = n * (z * p1 - p2) / (z * z - 1);
+      z1 = z; z = z1 - p1 / pp;
+    } while (Math.abs(z - z1) > 1e-14);
+    x[i] = -z; x[n - 1 - i] = z; w[i] = w[n - 1 - i] = 2 / ((1 - z * z) * pp * pp);
+  }
+  return { x, w, n };
+}
+const GL = gaussLegendre(24), NT = 192, NLOOP = 480;
+const COS_T = new Float64Array(NT), SIN_T = new Float64Array(NT);
+for (let j = 0; j < NT; j++) { COS_T[j] = Math.cos(TAU * j / NT); SIN_T[j] = Math.sin(TAU * j / NT); }
+
+/* ───────── tab state ───────── */
+const TABS = {
+  gradient: { kind: 'scalar', list: ['hill', 'twin', 'saddle', 'ripples', 'plane'], preset: 'hill', show: { heat: true, contours: true, arrows: false, flow: true } },
+  divergence: { kind: 'vector', list: ['source', 'sink', 'dipole', 'expand', 'accel', 'squeeze', 'whirl', 'drain'], preset: 'source', show: { heat: true, contours: false, arrows: true, flow: true } },
+  curl: { kind: 'vector', list: ['rotate', 'whirl', 'shear', 'vpair', 'drain', 'squeeze', 'wind'], preset: 'rotate', show: { heat: true, contours: false, arrows: true, flow: true } },
+};
+const MODES = Object.keys(TABS);
+for (const k of MODES) Object.assign(TABS[k], { mode: k, base: null, els: [], added: [], edited: false, probe: { x: 0, y: 0 }, r: 0.6, tool: 'probe', hintSeen: false, customHint: null, zoom: 1, ox: 0, oy: 0 });
+
+let mode = 'gradient', st = TABS.gradient;
+
+/* view: screen ↔ world, with each tab’s own zoom and pan */
+const view = { W: 0, H: 0, dpr: 1, s0: 100, s: 100, cx: 0, cy: 0, ox: 0, oy: 0, x0: -3.2, x1: 3.2, y0: -2.4, y1: 2.4 };
+const toSX = x => view.cx + (x - view.ox) * view.s, toSY = y => view.cy - (y - view.oy) * view.s;
+const toWX = px => view.ox + (px - view.cx) / view.s, toWY = py => view.oy + (view.cy - py) / view.s;
+function applyView() {
+  view.s = view.s0 * st.zoom; view.ox = st.ox; view.oy = st.oy;
+  const hx = (view.W || 640) / (2 * view.s), hy = (view.H || 480) / (2 * view.s);
+  view.x0 = view.ox - hx; view.x1 = view.ox + hx; view.y0 = view.oy - hy; view.y1 = view.oy + hy;
+}
+function defaultHalf() { return view.W ? [view.W / (2 * view.s0), view.H / (2 * view.s0)] : [3.2, 2.4]; }
+function clampProbe(S) {
+  const [hx, hy] = defaultHalf();
+  S.probe.x = clamp(S.probe.x, -hx + 0.04, hx - 0.04); S.probe.y = clamp(S.probe.y, -hy + 0.04, hy - 0.04);
+}
+function clampToView(p) {
+  const mx = (view.x1 - view.x0) * 0.01, my = (view.y1 - view.y0) * 0.01;
+  p.x = clamp(p.x, view.x0 + mx, view.x1 - mx); p.y = clamp(p.y, view.y0 + my, view.y1 - my);
+}
+function loadPreset(S, key) {
+  const P = (S.kind === 'scalar' ? SCALAR : VECTOR)[key];
+  S.preset = key; S.base = P.base || null;
+  S.els = (P.els || []).map(makeEl); S.added = []; S.edited = false;
+  if (P.probe) { S.probe.x = P.probe[0]; S.probe.y = P.probe[1]; }
+  if (P.r) S.r = P.r;
+  S.zoom = 1; S.ox = 0; S.oy = 0;
+  clampProbe(S);
+}
+for (const k of MODES) loadPreset(TABS[k], TABS[k].preset);
+
+let speed = 1, paused = reduceMotion, labVisible = true, paddleAngle = 0;
+let staticDirty = true, probeDirty = true, renderDirty = true, drag = null;
+let viewTouchedAt = -1e9, needParticleReinit = false, builtCoarse = false, zoomAnim = 0, zoomUsed = false;
+const simRate = () => speed * (st.kind === 'scalar' ? 1.6 : 1);
+const isCoarse = () => (drag && (drag.type === 'el' || drag.type === 'pan' || drag.type === 'pinch')) || performance.now() - viewTouchedAt < 160;
+
+/* ───────── DOM ───────── */
+const labEl = $('#lab'), panelEl = $('#lab-panel'), tabEls = $$('.tab'), canvas = $('#view'), ctx = canvas.getContext('2d');
+const wrapEl = $('#canvas-wrap'), hintEl = $('#hint'), legendEl = $('#legend'), toolsEl = $('#tools');
+const undoBtn = $('#undo'), resetBtn = $('#reset'), radiusIn = $('#radius'), radiusOut = $('#radius-out'), dyeBtn = $('#dye');
+const roEl = $('#readout'), presetsEl = $('#presets'), noteEl = $('#note'), speedIn = $('#speed'), speedOut = $('#speed-out'), pauseBtn = $('#pause');
+const zinBtn = $('#zin'), zoutBtn = $('#zout'), zfitBtn = $('#zfit'), zlevelEl = $('#zlevel'), ztipEl = $('#ztip');
+const stat = document.createElement('canvas'), sctx = stat.getContext('2d');
+
+/* ───────── palette from CSS ───────── */
+const pal = {};
+const probeCtx = document.createElement('canvas').getContext('2d');
+function rgbOf(c) {
+  probeCtx.fillStyle = '#000'; probeCtx.fillStyle = c; const v = String(probeCtx.fillStyle);
+  if (v[0] === '#') return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16)];
+  const m = v.match(/[\d.]+/g); return m ? [+m[0], +m[1], +m[2]] : [0, 0, 0];
+}
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function readPalette() {
+  const cs = getComputedStyle(document.documentElement);
+  const get = n => cs.getPropertyValue(n).trim();
+  pal.sheet = get('--sheet') || '#f9f4e6'; pal.ink = get('--ink') || '#14264b'; pal.ink2 = get('--ink-2') || '#3b4a6e';
+  pal.brass = get('--brass') || '#b98019'; pal.amber = get('--amber') || '#d9761b'; pal.verd = get('--verdigris') || '#237d8c';
+  pal.rubric = get('--rubric') || '#a3223a';
+  pal.sheetRGB = rgbOf(pal.sheet); pal.inkRGB = rgbOf(pal.ink); pal.rubricRGB = rgbOf(pal.rubric);
+  pal.posRGB = rgbOf(get('--heat-pos') || '#eba23a'); pal.negRGB = rgbOf(get('--heat-neg') || '#3e9eab');
+  pal.heatMax = parseFloat(get('--heat-max')) || 0.66;
+  pal.dark = (0.299 * pal.sheetRGB[0] + 0.587 * pal.sheetRGB[1] + 0.114 * pal.sheetRGB[2]) < 128;
+  staticDirty = renderDirty = true;
+}
+
+/* ───────── sizing ───────── */
+function resize() {
+  const r = wrapEl.getBoundingClientRect();
+  const W = Math.max(200, Math.round(r.width)), H = Math.max(200, Math.round(r.height));
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (W === view.W && H === view.H && dpr === view.dpr) return;
+  const first = !view.W;
+  Object.assign(view, { W, H, dpr, cx: W / 2, cy: H / 2, s0: Math.min(W, H) / 6.4 });
+  canvas.width = stat.width = Math.round(W * dpr); canvas.height = stat.height = Math.round(H * dpr);
+  if (first) for (const k of MODES) clampProbe(TABS[k]);
+  applyView(); initParticles();
+  staticDirty = probeDirty = renderDirty = true;
+}
+
+/* ───────── static layer: colour wash, grid, level curves, arrows ───────── */
+const heatCanvas = document.createElement('canvas'), heatCtx = heatCanvas.getContext('2d');
+let heatImg = null, heatVals = null, cgrid = null, arrowRef = 1;
+const HEAT_SCALE = 1.1;
+
+function buildStatic() {
+  builtCoarse = isCoarse();
+  const g = sctx;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  g.fillStyle = pal.sheet; g.fillRect(0, 0, stat.width, stat.height);
+  g.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  if (st.show.heat) drawHeat(g);
+  drawGrid(g);
+  if (st.kind === 'scalar' && st.show.contours) drawContours(g);
+  computeArrowRef();
+  if (st.show.arrows) drawArrows(g);
+}
+
+function drawHeat(g) {
+  const cell = builtCoarse ? 8 : 5;
+  const cols = Math.max(2, Math.ceil(view.W / cell)), rows = Math.max(2, Math.ceil(view.H / cell)), n = cols * rows;
+  if (heatCanvas.width !== cols || heatCanvas.height !== rows || !heatImg) {
+    heatCanvas.width = cols; heatCanvas.height = rows; heatImg = heatCtx.createImageData(cols, rows);
+  }
+  if (!heatVals || heatVals.length < n) heatVals = new Float32Array(n);
+  const scalar = st.kind === 'scalar', useDiv = mode === 'divergence';
+  let maxAbs = 0;
+  for (let j = 0; j < rows; j++) {
+    const wy = toWY((j + 0.5) * cell);
+    for (let i = 0; i < cols; i++) {
+      const wx = toWX((i + 0.5) * cell);
+      let v;
+      if (scalar) v = scalarEval(st, wx, wy, t3)[0];
+      else { divCurl(st, wx, wy, dc); v = useDiv ? dc[0] : dc[1]; }
+      heatVals[j * cols + i] = v;
+      const a = v < 0 ? -v : v; if (a > maxAbs) maxAbs = a;
+    }
+  }
+  const d = heatImg.data, B = pal.sheetRGB, Pp = pal.posRGB, Pn = pal.negRGB, mx = pal.heatMax;
+  const norm = scalar ? (maxAbs > 1e-9 ? 1 / maxAbs : 0) : 1 / HEAT_SCALE;
+  for (let k = 0; k < n; k++) {
+    let t = heatVals[k] * norm;
+    t = scalar ? clamp(t, -1, 1) : Math.tanh(t);
+    const m = Math.pow(Math.abs(t), 0.85) * mx, C = t >= 0 ? Pp : Pn, o = k * 4;
+    d[o] = B[0] + (C[0] - B[0]) * m; d[o + 1] = B[1] + (C[1] - B[1]) * m; d[o + 2] = B[2] + (C[2] - B[2]) * m; d[o + 3] = 255;
+  }
+  heatCtx.putImageData(heatImg, 0, 0);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(heatCanvas, 0, 0, cols * cell, rows * cell);
+}
+
+function niceStep(x) {
+  const p = Math.pow(10, Math.floor(Math.log10(x))), m = x / p;
+  return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p;
+}
+function axisLetter(g, ch, x, y) {
+  g.font = `italic 700 20px ${MATHFONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  g.lineWidth = 4.5; g.strokeStyle = pal.sheet; g.strokeText(ch, x, y);
+  g.fillStyle = pal.rubric; g.fillText(ch, x, y);
+}
+function drawGrid(g) {
+  const step = niceStep(90 / view.s);
+  const kx0 = Math.ceil(view.x0 / step), kx1 = Math.floor(view.x1 / step), ky0 = Math.ceil(view.y0 / step), ky1 = Math.floor(view.y1 / step);
+  g.save();
+  g.lineWidth = 1; g.strokeStyle = rgba(pal.inkRGB, pal.dark ? 0.09 : 0.075);
+  g.beginPath();
+  for (let k = kx0; k <= kx1; k++) { if (!k) continue; const X = Math.round(toSX(k * step)) + 0.5; g.moveTo(X, 0); g.lineTo(X, view.H); }
+  for (let k = ky0; k <= ky1; k++) { if (!k) continue; const Y = Math.round(toSY(k * step)) + 0.5; g.moveTo(0, Y); g.lineTo(view.W, Y); }
+  g.stroke();
+  const X0 = Math.round(toSX(0)) + 0.5, Y0 = Math.round(toSY(0)) + 0.5;
+  g.strokeStyle = rgba(pal.inkRGB, 0.28); g.lineWidth = 1.2; g.beginPath();
+  if (X0 >= 0 && X0 <= view.W) { g.moveTo(X0, 0); g.lineTo(X0, view.H); }
+  if (Y0 >= 0 && Y0 <= view.H) { g.moveTo(0, Y0); g.lineTo(view.W, Y0); }
+  g.stroke();
+  const labY = clamp(Y0 + 5, 4, view.H - 20), labX = clamp(X0 + 6, 4, view.W - 48);
+  g.fillStyle = rgba(pal.inkRGB, 0.62); g.font = `13px ${MATHFONT}`;
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  for (let k = kx0; k <= kx1; k++) if (k) g.fillText(fmtTick(k * step, step), toSX(k * step), labY);
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  for (let k = ky0; k <= ky1; k++) { const Y = toSY(k * step); if (k && Y > 32) g.fillText(fmtTick(k * step, step), labX, Y); }
+  axisLetter(g, 'x', view.W - 66, clamp(Y0 - 14, 16, view.H - 16));
+  axisLetter(g, 'y', clamp(X0 + 18, 16, view.W - 16), clamp(16, 16, view.H - 16));
+  g.restore();
+}
+
+function drawContours(g) {
+  const step = builtCoarse ? 9 : 6, cols = Math.ceil(view.W / step) + 1, rows = Math.ceil(view.H / step) + 1, n = cols * rows;
+  if (!cgrid || cgrid.length < n) cgrid = new Float32Array(n);
+  let mn = Infinity, mx = -Infinity;
+  for (let j = 0; j < rows; j++) {
+    const wy = toWY(j * step);
+    for (let i = 0; i < cols; i++) {
+      const v = scalarEval(st, toWX(i * step), wy, t3)[0];
+      cgrid[j * cols + i] = v; if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+  }
+  const span = mx - mn; if (!(span > 1e-6)) return;
+  const dl = niceStep(span / 12), minor = new Path2D(), major = new Path2D();
+  for (let q = Math.ceil(mn / dl); q * dl <= mx; q++) march(cgrid, cols, rows, step, q * dl, q % 5 === 0 ? major : minor);
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  g.strokeStyle = rgba(pal.inkRGB, pal.dark ? 0.42 : 0.36); g.lineWidth = 1; g.stroke(minor);
+  g.strokeStyle = rgba(pal.inkRGB, pal.dark ? 0.7 : 0.62); g.lineWidth = 1.5; g.stroke(major);
+  g.restore();
+}
+function march(v, cols, rows, step, L, path) {
+  const seg = (ax, ay, bx, by) => { path.moveTo(ax, ay); path.lineTo(bx, by); };
+  for (let j = 0; j < rows - 1; j++) {
+    const y0 = j * step, r0 = j * cols, r1 = r0 + cols;
+    for (let i = 0; i < cols - 1; i++) {
+      const a = v[r0 + i], b = v[r0 + i + 1], c = v[r1 + i + 1], d = v[r1 + i];
+      const idx = (a > L ? 8 : 0) | (b > L ? 4 : 0) | (c > L ? 2 : 0) | (d > L ? 1 : 0);
+      if (idx === 0 || idx === 15) continue;
+      const x0 = i * step;
+      switch (idx) {
+        case 1: case 14: seg(x0, y0 + step * (L - a) / (d - a), x0 + step * (L - d) / (c - d), y0 + step); break;
+        case 2: case 13: seg(x0 + step * (L - d) / (c - d), y0 + step, x0 + step, y0 + step * (L - b) / (c - b)); break;
+        case 3: case 12: seg(x0, y0 + step * (L - a) / (d - a), x0 + step, y0 + step * (L - b) / (c - b)); break;
+        case 4: case 11: seg(x0 + step * (L - a) / (b - a), y0, x0 + step, y0 + step * (L - b) / (c - b)); break;
+        case 6: case 9: seg(x0 + step * (L - a) / (b - a), y0, x0 + step * (L - d) / (c - d), y0 + step); break;
+        case 7: case 8: seg(x0, y0 + step * (L - a) / (d - a), x0 + step * (L - a) / (b - a), y0); break;
+        default: { // 5 or 10: saddle cell, resolve with the center value
+          const hi = (a + b + c + d) * 0.25 > L;
+          const lx = x0, ly = y0 + step * (L - a) / (d - a), tx = x0 + step * (L - a) / (b - a), ty = y0;
+          const rx = x0 + step, ry = y0 + step * (L - b) / (c - b), bx = x0 + step * (L - d) / (c - d), by = y0 + step;
+          if ((idx === 5) === hi) { seg(lx, ly, tx, ty); seg(bx, by, rx, ry); } else { seg(tx, ty, rx, ry); seg(lx, ly, bx, by); }
+        }
+      }
+    }
+  }
+}
+
+function computeArrowRef() {
+  const mags = [], nx = 16, ny = 12, w = view.x1 - view.x0, h = view.y1 - view.y0;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    sampleField(st, view.x0 + (i + 0.5) * w / nx, view.y0 + (j + 0.5) * h / ny, t2);
+    mags.push(Math.hypot(t2[0], t2[1]));
+  }
+  mags.sort((p, q) => p - q);
+  arrowRef = Math.max(mags[Math.floor(mags.length * 0.7)], 1e-3);
+}
+const lenPx = (m, max) => { const s = m / arrowRef; return max * s / (1 + s); };
+
+function drawArrows(g) {
+  const sp = clamp(Math.min(view.W, view.H) / 12, 34, 54);
+  const nx = Math.max(2, Math.floor(view.W / sp)), ny = Math.max(2, Math.floor(view.H / sp));
+  const ox = (view.W - (nx - 1) * sp) / 2, oy = (view.H - (ny - 1) * sp) / 2, maxL = sp * 0.86;
+  const shafts = new Path2D(), heads = new Path2D();
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const X = ox + i * sp, Y = oy + j * sp;
+    sampleField(st, toWX(X), toWY(Y), t2);
+    const m = Math.hypot(t2[0], t2[1]); if (m < 1e-6) continue;
+    const L = lenPx(m, maxL); if (L < 3) continue;
+    const ux = t2[0] / m, uy = -t2[1] / m, h = Math.min(6.5, L * 0.42), w = h * 0.48;
+    const x0 = X - ux * L / 2, y0 = Y - uy * L / 2, x1 = X + ux * L / 2, y1 = Y + uy * L / 2;
+    shafts.moveTo(x0, y0); shafts.lineTo(x1 - ux * h * 0.7, y1 - uy * h * 0.7);
+    heads.moveTo(x1, y1); heads.lineTo(x1 - ux * h - uy * w, y1 - uy * h + ux * w); heads.lineTo(x1 - ux * h + uy * w, y1 - uy * h - ux * w); heads.closePath();
+  }
+  g.save();
+  g.strokeStyle = g.fillStyle = rgba(pal.inkRGB, pal.dark ? 0.62 : 0.58);
+  g.lineWidth = 1.3; g.lineCap = 'round'; g.stroke(shafts); g.fill(heads);
+  g.restore();
+}
+
+/* ───────── moving tracers ───────── */
+const PK = 8;
+let NP = 0, PX, PY, AGE, LIFE, HX, HY, slot = 0;
+function initParticles() {
+  if (!view.W) return;
+  NP = Math.round(clamp(view.W * view.H / 380, 350, 2400) * (st.kind === 'scalar' ? 0.65 : 1));
+  PX = new Float32Array(NP); PY = new Float32Array(NP); AGE = new Float32Array(NP); LIFE = new Float32Array(NP);
+  HX = new Float32Array(NP * PK); HY = new Float32Array(NP * PK);
+  for (let i = 0; i < NP; i++) spawn(i, true);
+}
+function spawn(i, initial) {
+  const w = view.x1 - view.x0, h = view.y1 - view.y0;
+  const x = view.x0 + (Math.random() * 1.04 - 0.02) * w, y = view.y0 + (Math.random() * 1.04 - 0.02) * h;
+  PX[i] = x; PY[i] = y; LIFE[i] = 1.6 + Math.random() * 2.6; AGE[i] = initial ? Math.random() * LIFE[i] : 0;
+  const b = i * PK; for (let k = 0; k < PK; k++) { HX[b + k] = x; HY[b + k] = y; }
+}
+function inSinkCore(x, y) {
+  const els = st.els;
+  for (let i = 0; i < els.length; i++) {
+    const e = els[i];
+    if (e.kind === 0 && e.s < 0) { const dx = x - e.x, dy = y - e.y; if (dx * dx + dy * dy < e.a * e.a * 0.35) return true; }
+  }
+  return false;
+}
+function advect(x, y, h, cap, out) {
+  sampleField(st, x, y, k1);
+  sampleField(st, x + 0.5 * h * k1[0], y + 0.5 * h * k1[1], k2);
+  let dx = h * k2[0], dy = h * k2[1];
+  const L = Math.hypot(dx, dy);
+  if (L > cap) { dx *= cap / L; dy *= cap / L; }
+  out[0] = x + dx; out[1] = y + dy;
+}
+const adv = new Float64Array(2);
+function stepParticles(dt) {
+  const h = dt * simRate(), mx = (view.x1 - view.x0) * 0.03, my = (view.y1 - view.y0) * 0.03, cap = Math.min(0.09, 10 / view.s);
+  const X0 = view.x0 - mx, X1 = view.x1 + mx, Y0 = view.y0 - my, Y1 = view.y1 + my;
+  slot = (slot + 1) % PK;
+  for (let i = 0; i < NP; i++) {
+    advect(PX[i], PY[i], h, cap, adv);
+    const x = adv[0], y = adv[1];
+    AGE[i] += dt;
+    if (AGE[i] > LIFE[i] || x < X0 || x > X1 || y < Y0 || y > Y1 || !Number.isFinite(x) || inSinkCore(x, y)) { spawn(i, false); continue; }
+    PX[i] = x; PY[i] = y; HX[i * PK + slot] = x; HY[i * PK + slot] = y;
+  }
+}
+function drawParticles(g) {
+  const s = view.s, ax = view.cx - view.ox * s, ay = view.cy + view.oy * s, base = st.kind === 'scalar' ? 0.5 : 0.62;
+  g.save(); g.lineWidth = 1.15; g.lineCap = 'round'; g.strokeStyle = pal.ink;
+  for (let a = 0; a < PK - 1; a++) {
+    const s1 = (slot - a + PK) % PK, s0 = (s1 - 1 + PK) % PK;
+    g.globalAlpha = base * (1 - a / (PK - 1));
+    g.beginPath();
+    for (let i = 0; i < NP; i++) {
+      const b = i * PK, x0 = HX[b + s0], y0 = HY[b + s0], x1 = HX[b + s1], y1 = HY[b + s1];
+      const ddx = (x1 - x0) * s, ddy = (y1 - y0) * s;
+      if (ddx * ddx + ddy * ddy < 0.36) continue;
+      g.moveTo(ax + x0 * s, ay - y0 * s); g.lineTo(ax + x1 * s, ay - y1 * s);
+    }
+    g.stroke();
+  }
+  g.restore();
+}
+
+/* ───────── dye ───────── */
+let dye = null;
+function releaseDye() {
+  const n = 760, r = Math.max(0.03, st.r * 0.94), X = new Float32Array(n), Y = new Float32Array(n), C = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const rho = r * Math.sqrt(Math.random()), th = Math.random() * TAU;
+    X[i] = st.probe.x + rho * Math.cos(th); Y[i] = st.probe.y + rho * Math.sin(th); C[i] = Math.floor(th / (TAU / 4)) % 2;
+  }
+  dye = { n, X, Y, C, age: 0, life: 10 };
+  if (paused) { paused = false; syncPause(); }
+  renderDirty = true;
+}
+function stepDye(dt) {
+  if (!dye) return;
+  const h = dt * simRate(), cap = Math.min(0.09, 10 / view.s);
+  for (let i = 0; i < dye.n; i++) {
+    const x = dye.X[i]; if (!Number.isFinite(x)) continue;
+    advect(x, dye.Y[i], h, cap, adv);
+    if (inSinkCore(adv[0], adv[1])) { dye.X[i] = NaN; continue; }
+    dye.X[i] = adv[0]; dye.Y[i] = adv[1];
+  }
+  dye.age += dt; if (dye.age > dye.life) dye = null;
+}
+function drawDye(g) {
+  const fade = clamp((dye.life - dye.age) / 1.6, 0, 1);
+  g.save(); g.globalAlpha = 0.92 * fade;
+  for (let c = 0; c < 2; c++) {
+    g.fillStyle = c ? pal.ink : pal.brass; g.beginPath();
+    for (let i = 0; i < dye.n; i++) {
+      if (dye.C[i] !== c) continue; const x = dye.X[i]; if (!Number.isFinite(x)) continue;
+      g.rect(toSX(x) - 1.5, toSY(dye.Y[i]) - 1.5, 3, 3);
+    }
+    g.fill();
+  }
+  g.restore();
+}
+
+/* ───────── probe maths ───────── */
+const info = { f: 0, fx: 0, fy: 0, path: null, pathEnd: '', lineInt: 0, dF: 0, P: 0, Q: 0, div: 0, curl: 0, Px: 0, Qy: 0, Qx: 0, Py: 0, flux: 0, circ: 0, aDiv: 0, aCurl: 0, area: 1, omega: 0 };
+function computeProbe() {
+  const p = st.probe;
+  if (st.kind === 'scalar') {
+    scalarEval(st, p.x, p.y, t3); info.f = t3[0]; info.fx = t3[1]; info.fy = t3[2];
+    computeAscent();
+  } else {
+    vecEval(st, p.x, p.y, t2); info.P = t2[0]; info.Q = t2[1];
+    divCurl(st, p.x, p.y, dc);
+    info.div = dc[0]; info.curl = dc[1]; info.Px = dc[2]; info.Qy = dc[3]; info.Qx = dc[4]; info.Py = dc[5];
+    loopIntegrals();
+  }
+}
+/* Steepest-ascent path from the probe (unit-speed RK4), with a Simpson line integral of ∇f·dr. */
+function computeAscent() {
+  const S = st, ds = clamp(4 / view.s, 0.004, 0.015), g = new Float64Array(3), q1 = [0, 0], q2 = [0, 0], q3 = [0, 0], q4 = [0, 0];
+  const B = Math.max(8, Math.abs(view.x0), Math.abs(view.x1), Math.abs(view.y0), Math.abs(view.y1)) + 0.25;
+  const dir = (x, y, o) => {
+    scalarEval(S, x, y, g); const m = Math.hypot(g[1], g[2]);
+    if (m < 1e-12) { o[0] = o[1] = 0; return 0; }
+    o[0] = g[1] / m; o[1] = g[2] / m; return m;
+  };
+  let x = S.probe.x, y = S.probe.y, fcur = scalarEval(S, x, y, g)[0], li = 0, end = 'edge';
+  const f0 = fcur, pts = [x, y];
+  for (let i = 0; i < 5000; i++) {
+    if (dir(x, y, q1) < 1e-6) { end = 'top'; break; }
+    dir(x + 0.5 * ds * q1[0], y + 0.5 * ds * q1[1], q2);
+    dir(x + 0.5 * ds * q2[0], y + 0.5 * ds * q2[1], q3);
+    dir(x + ds * q3[0], y + ds * q3[1], q4);
+    const nx = x + ds / 6 * (q1[0] + 2 * q2[0] + 2 * q3[0] + q4[0]), ny = y + ds / 6 * (q1[1] + 2 * q2[1] + 2 * q3[1] + q4[1]);
+    const fn = scalarEval(S, nx, ny, g)[0];
+    if (!(fn > fcur + 1e-10)) { end = 'top'; break; }
+    const ddx = nx - x, ddy = ny - y;
+    scalarEval(S, x, y, g); let acc = g[1] * ddx + g[2] * ddy;
+    scalarEval(S, (x + nx) / 2, (y + ny) / 2, g); acc += 4 * (g[1] * ddx + g[2] * ddy);
+    scalarEval(S, nx, ny, g); acc += g[1] * ddx + g[2] * ddy;
+    li += acc / 6; x = nx; y = ny; fcur = fn; pts.push(x, y);
+    if (Math.abs(x) > B || Math.abs(y) > B) { end = 'edge'; break; }
+  }
+  info.path = pts; info.pathEnd = end; info.lineInt = li; info.dF = fcur - f0;
+}
+/* Flux and circulation around the loop, and the area integrals of div and curl over the disk. */
+function loopIntegrals() {
+  const cx = st.probe.x, cy = st.probe.y, r = st.r;
+  let flux = 0, circ = 0;
+  for (let i = 0; i < NLOOP; i++) {
+    const th = TAU * i / NLOOP, c = Math.cos(th), s = Math.sin(th);
+    vecEval(st, cx + r * c, cy + r * s, t2);
+    flux += t2[0] * c + t2[1] * s; circ += -t2[0] * s + t2[1] * c;
+  }
+  const ds = TAU * r / NLOOP; flux *= ds; circ *= ds;
+  let aDiv = 0, aCurl = 0;
+  for (let k = 0; k < GL.n; k++) {
+    const rho = r * (GL.x[k] + 1) / 2, wr = (r / 2) * GL.w[k] * rho;
+    let sd = 0, sc = 0;
+    for (let j = 0; j < NT; j++) { divCurl(st, cx + rho * COS_T[j], cy + rho * SIN_T[j], dc); sd += dc[0]; sc += dc[1]; }
+    aDiv += wr * sd; aCurl += wr * sc;
+  }
+  aDiv *= TAU / NT; aCurl *= TAU / NT;
+  info.flux = flux; info.circ = circ; info.aDiv = aDiv; info.aCurl = aCurl; info.area = Math.PI * r * r;
+  info.omega = circ / (2 * info.area);
+}
+
+/* ───────── overlay drawing ───────── */
+const F_UP = `700 21px ${MATHFONT}`, F_IT = `italic 700 21px ${MATHFONT}`, F_VAL = `600 19px ${MATHFONT}`;
+const run = (t, f, c, uv) => ({ t, f, c, uv: !!uv });
+function arrow(g, x0, y0, x1, y1, head) {
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy); if (L < 1) return;
+  const ux = dx / L, uy = dy / L, h = Math.min(head, L * 0.6), w = h * 0.5;
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - ux * h * 0.8, y1 - uy * h * 0.8); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - ux * h - uy * w, y1 - uy * h + ux * w); g.lineTo(x1 - ux * h + uy * w, y1 - uy * h - ux * w); g.closePath(); g.fill();
+}
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+/* A bold upright letter with a hat, for unit vectors drawn on the canvas. */
+function hatLetter(g, ch, x, y, fs, color, halo) {
+  g.save();
+  g.font = `700 ${fs}px ${MATHFONT}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round'; g.lineCap = 'round';
+  const top = y - fs * 0.47, hw = fs * 0.21;
+  const hat = () => { g.beginPath(); g.moveTo(x - hw, top - fs * 0.1); g.lineTo(x, top - fs * 0.32); g.lineTo(x + hw, top - fs * 0.1); };
+  if (halo) {
+    g.lineWidth = 4.5; g.strokeStyle = pal.sheet; g.strokeText(ch, x, y);
+    hat(); g.lineWidth = fs * 0.24; g.stroke();
+  }
+  g.fillStyle = color; g.fillText(ch, x, y);
+  hat(); g.strokeStyle = color; g.lineWidth = Math.max(1.5, fs * 0.09); g.stroke();
+  g.restore();
+}
+function measureRuns(g, runs) {
+  let w = 0;
+  for (const r of runs) { g.font = r.f; r.w = g.measureText(r.t).width + (r.uv ? 2 : 0); w += r.w; }
+  return w;
+}
+function drawRuns(g, runs, x, base, halo) {
+  let cx = x;
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round';
+  for (const r of runs) {
+    if (r.uv) hatLetter(g, r.t, cx + r.w / 2, base, 20, r.c, halo);
+    else {
+      g.font = r.f;
+      if (halo) { g.lineWidth = 5; g.strokeStyle = pal.sheet; g.strokeText(r.t, cx, base); }
+      g.fillStyle = r.c; g.fillText(r.t, cx, base);
+    }
+    cx += r.w;
+  }
+}
+/* Boxed label: notation in rubric red, value in ink. */
+function tagRuns(g, runs, x, y) {
+  g.save();
+  const w = measureRuns(g, runs), pad = 11, bw = Math.ceil(w) + pad * 2, bh = 35;
+  const bx = clamp(x - bw / 2, 6, view.W - bw - 6), by = clamp(y - bh / 2, 6, Math.max(6, view.H - bh - 62));
+  g.globalAlpha = 0.96; g.fillStyle = pal.sheet; roundRect(g, bx, by, bw, bh, 9); g.fill();
+  g.globalAlpha = 1; g.strokeStyle = rgba(pal.rubricRGB, 0.65); g.lineWidth = 1.6; g.stroke();
+  drawRuns(g, runs, bx + pad, by + bh / 2 + 7, false);
+  g.restore();
+}
+/* Unboxed label with a paper halo, centered on (x, y). */
+function labelRuns(g, runs, x, y) {
+  g.save();
+  const w = measureRuns(g, runs);
+  drawRuns(g, runs, clamp(x - w / 2, 6, view.W - w - 6), clamp(y + 7, 24, view.H - 8), true);
+  g.restore();
+}
+function flag(g, x, y) {
+  g.save(); g.strokeStyle = pal.ink; g.lineWidth = 1.6;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 19); g.stroke();
+  g.fillStyle = pal.amber; g.beginPath(); g.moveTo(x, y - 19); g.lineTo(x + 12, y - 15.5); g.lineTo(x, y - 12); g.closePath(); g.fill();
+  g.fillStyle = pal.ink; g.beginPath(); g.arc(x, y, 2.6, 0, TAU); g.fill();
+  g.restore();
+}
+
+function drawElements(g) {
+  g.save();
+  for (const e of st.els) {
+    const x = toSX(e.x), y = toSY(e.y);
+    if (x < -20 || x > view.W + 20 || y < -20 || y > view.H + 20) continue;
+    if (e.t === 'source' || e.t === 'sink') {
+      g.beginPath(); g.arc(x, y, 8, 0, TAU); g.fillStyle = e.t === 'source' ? pal.amber : pal.verd; g.fill();
+      g.lineWidth = 1.5; g.strokeStyle = pal.sheet; g.stroke();
+      g.lineWidth = 1.9; g.beginPath(); g.moveTo(x - 3.8, y); g.lineTo(x + 3.8, y);
+      if (e.t === 'source') { g.moveTo(x, y - 3.8); g.lineTo(x, y + 3.8); }
+      g.stroke();
+    } else if (e.t === 'ccw' || e.t === 'cw') {
+      const R = 12, ccw = e.t === 'ccw', a0 = 0.5, a1 = TAU - 0.5;
+      g.lineWidth = 2; g.strokeStyle = g.fillStyle = ccw ? pal.amber : pal.verd;
+      g.beginPath(); g.arc(x, y, R, a0, a1); g.stroke();
+      const th = ccw ? a0 : a1, px = x + R * Math.cos(th), py = y + R * Math.sin(th);
+      const dx = ccw ? Math.sin(th) : -Math.sin(th), dy = ccw ? -Math.cos(th) : Math.cos(th);
+      g.beginPath(); g.moveTo(px + dx * 5, py + dy * 5); g.lineTo(px - dy * 4.2, py + dx * 4.2); g.lineTo(px + dy * 4.2, py - dx * 4.2); g.closePath(); g.fill();
+      g.beginPath(); g.arc(x, y, 2.4, 0, TAU); g.fill();
+    } else {
+      const up = e.A >= 0, s = 7;
+      g.beginPath();
+      if (up) { g.moveTo(x, y - s); g.lineTo(x + s * 0.95, y + s * 0.7); g.lineTo(x - s * 0.95, y + s * 0.7); }
+      else { g.moveTo(x, y + s); g.lineTo(x + s * 0.95, y - s * 0.7); g.lineTo(x - s * 0.95, y - s * 0.7); }
+      g.closePath(); g.fillStyle = up ? pal.amber : pal.verd; g.fill();
+      g.lineWidth = 1.4; g.strokeStyle = pal.sheet; g.stroke();
+    }
+  }
+  g.restore();
+}
+
+function drawGradProbe(g, px, py) {
+  const gm = Math.hypot(info.fx, info.fy), P = info.path, rub = pal.rubric;
+  g.save();
+  if (P && P.length >= 6) {
+    g.lineWidth = 2.4; g.strokeStyle = pal.amber; g.setLineDash([7, 5]); g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); g.moveTo(toSX(P[0]), toSY(P[1]));
+    for (let k = 2; k < P.length; k += 2) g.lineTo(toSX(P[k]), toSY(P[k + 1]));
+    g.stroke(); g.setLineDash([]);
+    if (info.pathEnd === 'top') flag(g, toSX(P[P.length - 2]), toSY(P[P.length - 1]));
+  }
+  let tagX = px, tagY = py + 38, label = null;
+  if (gm > 1e-4) {
+    const ux = info.fx / gm, uy = -info.fy / gm, tx = -uy, ty = ux, q = 9;
+    g.strokeStyle = rgba(pal.inkRGB, 0.8); g.lineWidth = 1.4; g.setLineDash([4, 4]);
+    g.beginPath(); g.moveTo(px - tx * 52, py - ty * 52); g.lineTo(px + tx * 52, py + ty * 52); g.stroke(); g.setLineDash([]);
+    g.lineWidth = 1.2; g.beginPath(); g.moveTo(px + tx * q, py + ty * q); g.lineTo(px + tx * q + ux * q, py + ty * q + uy * q); g.lineTo(px + ux * q, py + uy * q); g.stroke();
+    g.font = `italic 14px ${MATHFONT}`; g.fillStyle = pal.ink2; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    const L = clamp(lenPx(gm, 125), 28, 130);
+    tagX = px - ux * 44; tagY = py - uy * 44;
+    const spots = [[px + tx * 80, py + ty * 80], [px - tx * 80, py - ty * 80]].map(([x, y]) => [clamp(x, 40, view.W - 40), clamp(y, 12, view.H - 12)]);
+    const overlap = ([x, y]) => Math.max(0, Math.min(x + 42, tagX + 66) - Math.max(x - 42, tagX - 66)) * Math.max(0, Math.min(y + 9, tagY + 18) - Math.max(y - 9, tagY - 18));
+    const dist = ([x, y]) => Math.hypot(x - tagX, y - tagY);
+    const oa = overlap(spots[0]), ob = overlap(spots[1]);
+    const [lx, ly] = oa !== ob ? (oa < ob ? spots[0] : spots[1]) : (dist(spots[0]) >= dist(spots[1]) ? spots[0] : spots[1]);
+    g.lineWidth = 4; g.strokeStyle = pal.sheet; g.strokeText('level curve', lx, ly); g.fillText('level curve', lx, ly);
+    g.strokeStyle = g.fillStyle = pal.amber; g.lineWidth = 3.4; g.lineCap = 'round';
+    arrow(g, px, py, px + ux * L, py + uy * L, 14);
+    label = [px + ux * (L + 20), py + uy * (L + 20)];
+  }
+  g.fillStyle = pal.sheet; g.strokeStyle = pal.ink; g.lineWidth = 2;
+  g.beginPath(); g.arc(px, py, 8, 0, TAU); g.fill(); g.stroke();
+  g.fillStyle = pal.ink; g.beginPath(); g.arc(px, py, 2.6, 0, TAU); g.fill();
+  g.restore();
+  if (label) labelRuns(g, [run('∇', `700 23px ${MATHFONT}`, rub), run('f', `italic 700 23px ${MATHFONT}`, rub)], label[0], label[1]);
+  tagRuns(g, gm > 1e-4
+    ? [run('|∇', F_UP, rub), run('f', F_IT, rub), run('|', F_UP, rub), run(' = ' + fmt(gm), F_VAL, pal.ink)]
+    : [run('∇', F_UP, rub), run('f', F_IT, rub), run(' = 0', F_VAL, pal.ink)], tagX, tagY);
+}
+
+function drawLoopProbe(g, px, py) {
+  const r = st.r, rpx = r * view.s, isDiv = mode === 'divergence', rub = pal.rubric;
+  g.save();
+  g.globalAlpha = 0.1; g.fillStyle = pal.brass; g.beginPath(); g.arc(px, py, rpx, 0, TAU); g.fill(); g.globalAlpha = 1;
+  g.lineWidth = 2; g.strokeStyle = pal.brass; g.stroke();
+  const N = clamp(Math.round(TAU * rpx / 24), 8, 32), maxL = 30, vals = new Float64Array(N);
+  let vmax = 0;
+  for (let i = 0; i < N; i++) {
+    const th = TAU * (i + 0.5) / N, c = Math.cos(th), s = Math.sin(th);
+    vecEval(st, st.probe.x + r * c, st.probe.y + r * s, t2);
+    vals[i] = isDiv ? t2[0] * c + t2[1] * s : -t2[0] * s + t2[1] * c;
+    vmax = Math.max(vmax, Math.abs(vals[i]));
+  }
+  const vscale = Math.max(vmax, 0.35 * arrowRef, 1e-9);
+  g.lineWidth = 2; g.lineCap = 'round';
+  for (let i = 0; i < N; i++) {
+    const th = TAU * (i + 0.5) / N, c = Math.cos(th), s = Math.sin(th);
+    const bx = px + rpx * c, by = py - rpx * s, v = vals[i];
+    const L = maxL * Math.abs(v) / vscale; if (L < 3.5) continue;
+    g.strokeStyle = g.fillStyle = v > 0 ? pal.amber : pal.verd;
+    if (isDiv) {
+      if (v > 0) arrow(g, bx, by, bx + c * L, by - s * L, 7); else arrow(g, bx + c * L, by - s * L, bx, by, 7);
+    } else {
+      const sg = v > 0 ? 1 : -1, tx = -s * sg, ty = -c * sg;
+      arrow(g, bx - tx * L / 2, by - ty * L / 2, bx + tx * L / 2, by + ty * L / 2, 7);
+    }
+  }
+  if (!isDiv) {
+    const R = Math.max(12, rpx * 0.9);
+    g.strokeStyle = pal.ink; g.lineCap = 'butt';
+    for (let k = 0; k < 4; k++) {
+      const a = paddleAngle + k * Math.PI / 2, c = Math.cos(a), s = Math.sin(a);
+      g.lineWidth = 1.6; g.beginPath(); g.moveTo(px + c * 7, py - s * 7); g.lineTo(px + c * R, py - s * R); g.stroke();
+      g.lineWidth = 6; g.beginPath(); g.moveTo(px + c * R * 0.56, py - s * R * 0.56); g.lineTo(px + c * R, py - s * R); g.stroke();
+    }
+  }
+  const val = isDiv ? info.div : info.curl, eps = 0.01;
+  g.fillStyle = pal.sheet; g.strokeStyle = pal.ink; g.lineWidth = 2;
+  g.beginPath(); g.arc(px, py, 8, 0, TAU); g.fill(); g.stroke();
+  g.lineCap = 'round';
+  if (isDiv) {
+    if (Math.abs(val) > eps) {
+      g.strokeStyle = val > 0 ? pal.amber : pal.verd; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(px - 4, py); g.lineTo(px + 4, py); if (val > 0) { g.moveTo(px, py - 4); g.lineTo(px, py + 4); } g.stroke();
+    }
+  } else if (val > eps) { g.fillStyle = pal.amber; g.beginPath(); g.arc(px, py, 3, 0, TAU); g.fill(); }
+  else if (val < -eps) { g.strokeStyle = pal.verd; g.lineWidth = 2; g.beginPath(); g.moveTo(px - 3.5, py - 3.5); g.lineTo(px + 3.5, py + 3.5); g.moveTo(px + 3.5, py - 3.5); g.lineTo(px - 3.5, py + 3.5); g.stroke(); }
+  g.restore();
+  const runs = isDiv
+    ? [run('∇·', F_UP, rub), run('F', F_IT, rub), run(' = ' + fmt(info.div), F_VAL, pal.ink)]
+    : [run('∇×', F_UP, rub), run('F', F_IT, rub), run(' = ' + fmt(info.curl) + ' ', F_VAL, pal.ink), run('z', F_UP, rub, true)];
+  const above = py - rpx - 24, below = py + rpx + 24;
+  tagRuns(g, runs, px, above > 24 ? above : below < view.H - 80 ? below : clamp(py + 40, 30, view.H - 80));
+}
+
+/* The basis in the corner: x̂ and ŷ, plus ẑ out of the page on the curl tab. */
+function drawBasis(g) {
+  const ox = view.W - 64, oy = view.H - 24, L = 30, rub = pal.rubric, curlTab = mode === 'curl', start = curlTab ? 8 : 0;
+  g.save(); g.lineCap = 'round';
+  for (const pass of [0, 1]) {
+    g.strokeStyle = g.fillStyle = pass ? rub : pal.sheet; g.lineWidth = pass ? 2.2 : 5.5;
+    arrow(g, ox + start, oy, ox + L, oy, 8); arrow(g, ox, oy - start, ox, oy - L, 8);
+  }
+  hatLetter(g, 'x', ox + L + 13, oy + 6, 19, rub, true);
+  hatLetter(g, 'y', ox, oy - L - 11, 19, rub, true);
+  if (curlTab) {
+    g.beginPath(); g.arc(ox, oy, 7, 0, TAU); g.fillStyle = pal.sheet; g.fill(); g.lineWidth = 1.9; g.strokeStyle = rub; g.stroke();
+    g.beginPath(); g.arc(ox, oy, 2.4, 0, TAU); g.fillStyle = rub; g.fill();
+    hatLetter(g, 'z', ox - 19, oy + 6, 19, rub, true);
+  } else { g.beginPath(); g.arc(ox, oy, 2.6, 0, TAU); g.fillStyle = rub; g.fill(); }
+  g.restore();
+}
+/* When panning hides the probe, point to it from the edge. */
+function drawProbePointer(g, px, py) {
+  if (px >= -6 && px <= view.W + 6 && py >= -6 && py <= view.H + 6) return;
+  const cx = view.W / 2, cy = view.H / 2, dx = px - cx, dy = py - cy, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, m = 24;
+  const t = Math.min((view.W / 2 - m) / Math.max(Math.abs(dx), 1e-9), (view.H / 2 - m) / Math.max(Math.abs(dy), 1e-9));
+  const ex = cx + dx * t, ey = cy + dy * t;
+  g.save();
+  g.fillStyle = pal.brass; g.strokeStyle = pal.sheet; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(ex + ux * 12, ey + uy * 12); g.lineTo(ex - uy * 8 - ux * 5, ey + ux * 8 - uy * 5); g.lineTo(ex + uy * 8 - ux * 5, ey - ux * 8 - uy * 5); g.closePath(); g.stroke(); g.fill();
+  g.font = `14px ${MATHFONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = pal.ink2;
+  g.lineWidth = 4; g.strokeText('probe', ex - ux * 26, ey - uy * 26); g.fillText('probe', ex - ux * 26, ey - uy * 26);
+  g.restore();
+}
+
+function render() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  ctx.drawImage(stat, 0, 0);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  if (st.show.flow) drawParticles(ctx);
+  if (dye) drawDye(ctx);
+  drawElements(ctx);
+  const px = toSX(st.probe.x), py = toSY(st.probe.y);
+  if (st.kind === 'scalar') drawGradProbe(ctx, px, py); else drawLoopProbe(ctx, px, py);
+  drawBasis(ctx);
+  drawProbePointer(ctx, px, py);
+}
+
+/* ───────── readout panel ───────── */
+let roRefs = {}, roLast = {};
+function buildReadout() {
+  const head = '<div class="ro-head"><span class="badge" data-k="badge"></span><span class="ro-pos" data-k="pos"></span></div><p class="ro-status" data-k="status"></p><p class="ro-vec" data-k="vec"></p>';
+  if (st.kind === 'scalar') {
+    roEl.innerHTML = head + `
+      <dl class="ro-grid">
+        <dt>${M('<i>f</i>(<i>x</i>, <i>y</i>)')}</dt><dd data-k="f"></dd>
+        <dt>${M('∂<i>f</i>/∂<i>x</i>')}</dt><dd data-k="fx"></dd>
+        <dt>${M('∂<i>f</i>/∂<i>y</i>')}</dt><dd data-k="fy"></dd>
+        <dt class="key">${M('|∇<i>f</i>|')}, the steepest slope</dt><dd class="key" data-k="gm"></dd>
+        <dt>direction of ${M(N.grad)} from ${M(UV.x)}</dt><dd data-k="dir"></dd>
+      </dl>
+      <div class="ro-sub">
+        <h4>Gradient theorem, along the dashed climb</h4>
+        <dl class="ro-grid">
+          <dt>${M('∫ ∇<i>f</i> · d<b>r</b>')}</dt><dd data-k="li"></dd>
+          <dt>${M('<i>f</i>(end) − <i>f</i>(start)')}</dt><dd data-k="df"></dd>
+        </dl>
+        <p class="ro-foot">The climb always follows ${M(N.grad)}, so it cuts every level curve at a right angle. Adding up ${M(N.grad)} along any path gives the change in height.</p>
+      </div>`;
+  } else if (mode === 'divergence') {
+    roEl.innerHTML = head + `
+      <dl class="ro-grid">
+        <dt>${M('∂<i>P</i>/∂<i>x</i> + ∂<i>Q</i>/∂<i>y</i>')}</dt><dd data-k="parts"></dd>
+        <dt class="key">${M(N.div)}</dt><dd class="key" data-k="val"></dd>
+      </dl>
+      <div class="ro-sub">
+        <h4>Loop of radius <span data-k="r"></span></h4>
+        <dl class="ro-grid">
+          <dt>net outflow ${M('∮ <i>F</i>·<b>n</b> d<i>s</i>')}</dt><dd data-k="flux"></dd>
+          <dt>divergence inside ${M('∬ ∇·<i>F</i> d<i>A</i>')}</dt><dd data-k="area"></dd>
+          <dt>outflow ÷ area</dt><dd data-k="ratio"></dd>
+        </dl>
+        <p class="ro-foot">The first two always match: that’s the divergence theorem. Shrink the loop and outflow ÷ area closes in on ${M(N.div)}.</p>
+      </div>`;
+  } else {
+    roEl.innerHTML = head + `
+      <dl class="ro-grid">
+        <dt>${M('∂<i>Q</i>/∂<i>x</i> − ∂<i>P</i>/∂<i>y</i>')}</dt><dd data-k="parts"></dd>
+        <dt class="key">${M(N.curlz)}</dt><dd class="key" data-k="val"></dd>
+      </dl>
+      <div class="ro-sub">
+        <h4>Loop of radius <span data-k="r"></span></h4>
+        <dl class="ro-grid">
+          <dt>circulation ${M('∮ <i>F</i>·d<b>r</b>')}</dt><dd data-k="circ"></dd>
+          <dt>curl inside ${M(`∬ ${N.curlz} d<i>A</i>`)}</dt><dd data-k="area"></dd>
+          <dt>circulation ÷ area</dt><dd data-k="ratio"></dd>
+          <dt>paddle spin, half of that</dt><dd data-k="spin"></dd>
+        </dl>
+        <p class="ro-foot">Green’s theorem makes the first two match. A paddle wheel with this rim turns at half the average curl inside it.</p>
+      </div>`;
+  }
+  roRefs = {}; roLast = {};
+  $$('[data-k]', roEl).forEach(el => { roRefs[el.dataset.k] = el; });
+}
+function setRO(k, v) { if (roLast[k] !== v) { roLast[k] = v; if (roRefs[k]) roRefs[k].textContent = v; } }
+function setROH(k, html) { if (roLast[k] !== html) { roLast[k] = html; if (roRefs[k]) roRefs[k].innerHTML = html; } }
+function setBadge(text, tone) { setRO('badge', text); if (roRefs.badge && roRefs.badge.dataset.tone !== tone) roRefs.badge.dataset.tone = tone; }
+function updateReadout() {
+  const p = st.probe, eps = 0.01;
+  setRO('pos', `at (${fmt(p.x)}, ${fmt(p.y)})`);
+  if (st.kind === 'scalar') {
+    const gm = Math.hypot(info.fx, info.fy), flat = gm < 0.004;
+    setBadge(flat ? 'Critical point' : 'Uphill', flat ? 'zero' : 'pos');
+    setROH('status', flat ? `Flat here: ${M(N.grad + ' = 0')}. Peaks, pits and saddles all look like this up close.`
+      : `Uphill is steepest along ${M(N.grad)}, at right angles to the level curve through this point.`);
+    setROH('vec', `${M(N.grad)} = ${vecHTML(info.fx, info.fy)}`);
+    setRO('f', fmt(info.f)); setRO('fx', fmt(info.fx)); setRO('fy', fmt(info.fy)); setRO('gm', fmt(gm));
+    setRO('dir', flat ? '—' : `${Math.round((Math.atan2(info.fy, info.fx) * 180 / Math.PI + 360) % 360)}°`);
+    setRO('li', fmt3(info.lineInt)); setRO('df', fmt3(info.dF));
+    return;
+  }
+  setROH('vec', `${M(`<i>F</i> = <i>P</i>${UV.x} + <i>Q</i>${UV.y}`)} = ${vecHTML(info.P, info.Q)}`);
+  setRO('r', fmtR(st.r));
+  if (mode === 'divergence') {
+    const v = info.div;
+    if (v > eps) { setBadge('Source', 'pos'); setROH('status', 'More flows out of a tiny loop here than flows in.'); }
+    else if (v < -eps) { setBadge('Sink', 'neg'); setROH('status', 'More flows into a tiny loop here than flows out.'); }
+    else { setBadge('Balanced', 'zero'); setROH('status', 'What flows in flows out. Nothing is created or drained here.'); }
+    setRO('parts', `${fmt(info.Px)} + ${fmtP(info.Qy)}`); setRO('val', fmt(v));
+    setRO('flux', fmt3(info.flux)); setRO('area', fmt3(info.aDiv)); setRO('ratio', fmt(info.flux / info.area));
+  } else {
+    const v = info.curl;
+    if (v > eps) { setBadge('Counterclockwise ⊙', 'pos'); setROH('status', `A tiny paddle wheel here turns counterclockwise, so ${M(N.curl)} points out of the page, along ${M('+' + UV.z)}.`); }
+    else if (v < -eps) { setBadge('Clockwise ⊗', 'neg'); setROH('status', `A tiny paddle wheel here turns clockwise, so ${M(N.curl)} points into the page, along ${M(MINUS + UV.z)}.`); }
+    else { setBadge('No spin', 'zero'); setROH('status', 'A tiny paddle wheel here wouldn’t turn, even where the flow bends.'); }
+    setRO('parts', `${fmt(info.Qx)} − ${fmtP(info.Py)}`); setRO('val', fmt(v));
+    setRO('circ', fmt3(info.circ)); setRO('area', fmt3(info.aCurl)); setRO('ratio', fmt(info.circ / info.area));
+    const w = info.omega;
+    setRO('spin', Math.abs(w) < 0.005 ? 'still' : `${fmt(Math.abs(w))} ${w > 0 ? '↺' : '↻'}`);
+  }
+}
+
+/* ───────── controls ───────── */
+const ZOOM_HOW = coarsePointer ? 'pinch to zoom' : 'pinch or Ctrl + scroll to zoom';
+function renderPresets() {
+  const lib = st.kind === 'scalar' ? SCALAR : VECTOR;
+  presetsEl.innerHTML = st.list.map(k => `<button type="button" class="chip" data-preset="${k}" aria-pressed="${k === st.preset}">${lib[k].label}</button>`).join('');
+  updateNote();
+}
+function updateNote() {
+  const P = (st.kind === 'scalar' ? SCALAR : VECTOR)[st.preset];
+  const note = (mode === 'divergence' && P.noteD) || (mode === 'curl' && P.noteC) || P.note;
+  noteEl.innerHTML = (P.fx ? `<span class="fx">${M(P.fx)}</span>` : '') + note +
+    (st.edited ? '<span class="edited">You’ve changed this field. Reset puts it back.</span>' : '');
+}
+function renderTools() {
+  toolsEl.innerHTML = TOOLS[st.kind].map(([k, label, tip]) =>
+    `<button type="button" class="seg-btn" data-tool="${k}" aria-pressed="${st.tool === k}" title="${tip}">${label}</button>`).join('');
+  syncEditButtons();
+}
+function syncEditButtons() { undoBtn.disabled = st.added.length === 0; resetBtn.disabled = !st.edited; }
+function syncToggles() {
+  $$('[data-show]').forEach(inp => { inp.checked = !!st.show[inp.dataset.show]; });
+  $('#heat-label').textContent = { gradient: 'Color by height', divergence: 'Color by ∇·F', curl: 'Color by ∇×F' }[mode];
+  updateLegend();
+}
+function updateLegend() {
+  const [sym, l, r] = {
+    gradient: ['<i>f</i>', 'low', 'high'],
+    divergence: [N.div, '− sink', 'source +'],
+    curl: [N.curl, '− clockwise', 'counterclockwise +'],
+  }[mode];
+  $('#lg-sym').innerHTML = sym; $('#lg-l').textContent = l; $('#lg-r').textContent = r;
+  legendEl.classList.toggle('is-off', !st.show.heat);
+}
+const r2u = r => Math.round(1000 * Math.log(r / RMIN) / Math.log(RMAX / RMIN));
+const u2r = u => RMIN * Math.pow(RMAX / RMIN, u / 1000);
+function syncRadius() { radiusIn.value = String(r2u(st.r)); radiusOut.textContent = fmtR(st.r); }
+function setRadius(v) { st.r = clamp(v, RMIN, RMAX); syncRadius(); probeDirty = renderDirty = true; }
+function syncPause() { pauseBtn.textContent = paused ? 'Play' : 'Pause'; }
+function setHint() {
+  let txt;
+  if (st.tool !== 'probe') txt = `Tap the canvas to add ${STAMP_NAMES[st.tool]}. Drag any marker to move it.`;
+  else if (st.customHint) txt = st.customHint;
+  else if (st.kind === 'scalar') txt = `Drag the probe, or tap to move it. Drag empty space to pan; ${ZOOM_HOW}.`;
+  else txt = `Drag the ${mode === 'curl' ? 'paddle wheel' : 'loop'} or its rim. Drag empty space to pan; ${ZOOM_HOW}.`;
+  hintEl.textContent = txt;
+  hintEl.classList.toggle('is-hidden', st.tool === 'probe' && st.hintSeen);
+}
+function hideHint() { st.hintSeen = true; st.customHint = null; hintEl.classList.add('is-hidden'); }
+
+/* zoom and pan */
+function updateZoomUI() {
+  zlevelEl.textContent = `${fmt(st.zoom, st.zoom < 1 ? 2 : 1)}×`;
+  zinBtn.disabled = st.zoom >= ZMAX - 1e-6; zoutBtn.disabled = st.zoom <= ZMIN + 1e-6;
+  zfitBtn.disabled = Math.abs(st.zoom - 1) < 1e-6 && Math.abs(st.ox) < 1e-6 && Math.abs(st.oy) < 1e-6;
+}
+function viewChanged() {
+  applyView(); updateZoomUI();
+  staticDirty = probeDirty = renderDirty = true;
+  viewTouchedAt = performance.now(); needParticleReinit = true;
+}
+function clampPan() { st.ox = clamp(st.ox, -PAN_LIMIT, PAN_LIMIT); st.oy = clamp(st.oy, -PAN_LIMIT, PAN_LIMIT); }
+function zoomAt(factor, sx, sy) {
+  const wx = toWX(sx), wy = toWY(sy);
+  st.zoom = clamp(st.zoom * factor, ZMIN, ZMAX);
+  const s = view.s0 * st.zoom;
+  st.ox = wx - (sx - view.cx) / s; st.oy = wy + (sy - view.cy) / s;
+  clampPan(); viewChanged(); zoomUsed = true;
+}
+function panBy(dx, dy) { st.ox -= dx / view.s; st.oy += dy / view.s; clampPan(); viewChanged(); }
+function resetView() { cancelAnimationFrame(zoomAnim); st.zoom = 1; st.ox = 0; st.oy = 0; viewChanged(); }
+function zoomPivot() {
+  const px = toSX(st.probe.x), py = toSY(st.probe.y);
+  return (px >= 0 && px <= view.W && py >= 0 && py <= view.H) ? [px, py] : [view.cx, view.cy];
+}
+function animateZoom(factor) {
+  cancelAnimationFrame(zoomAnim);
+  const [sx, sy] = zoomPivot(), z0 = st.zoom, z1 = clamp(z0 * factor, ZMIN, ZMAX), S = st;
+  if (Math.abs(z1 - z0) < 1e-9) return;
+  if (reduceMotion) { zoomAt(z1 / z0, sx, sy); return; }
+  const t0 = performance.now(), dur = 220;
+  const step = now => {
+    if (st !== S) return;
+    const t = clamp((now - t0) / dur, 0, 1), e = 1 - Math.pow(1 - t, 3);
+    zoomAt(z0 * Math.pow(z1 / z0, e) / st.zoom, sx, sy);
+    if (t < 1) zoomAnim = requestAnimationFrame(step);
+  };
+  zoomAnim = requestAnimationFrame(step);
+}
+function ensureProbeVisible() {
+  const p = st.probe, m = 40 / view.s; let dx = 0, dy = 0;
+  if (p.x < view.x0 + m) dx = p.x - (view.x0 + m); else if (p.x > view.x1 - m) dx = p.x - (view.x1 - m);
+  if (p.y < view.y0 + m) dy = p.y - (view.y0 + m); else if (p.y > view.y1 - m) dy = p.y - (view.y1 - m);
+  if (dx || dy) { st.ox += dx; st.oy += dy; clampPan(); viewChanged(); }
+}
+zinBtn.addEventListener('click', () => animateZoom(1.5));
+zoutBtn.addEventListener('click', () => animateZoom(1 / 1.5));
+zfitBtn.addEventListener('click', resetView);
+
+function setMode(m) {
+  cancelAnimationFrame(zoomAnim);
+  mode = m; st = TABS[m];
+  labEl.dataset.mode = m;
+  tabEls.forEach(b => { const on = b.dataset.mode === m; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; });
+  panelEl.setAttribute('aria-labelledby', 'tab-' + m);
+  dye = null; paddleAngle = 0; drag = null; pointers.clear();
+  applyView(); updateZoomUI();
+  renderPresets(); renderTools(); syncToggles(); buildReadout(); syncRadius(); setHint();
+  initParticles();
+  staticDirty = probeDirty = renderDirty = true;
+}
+function selectMode(m, force) {
+  if (m !== mode || force) setMode(m);
+  if (location.hash.slice(1) !== m) { try { location.hash = m; } catch (err) { /* ignore */ } }
+}
+function afterPresetLoad() {
+  cancelAnimationFrame(zoomAnim);
+  dye = null; paddleAngle = 0; st.customHint = null;
+  applyView(); updateZoomUI();
+  renderPresets(); renderTools(); syncRadius(); initParticles(); setHint();
+  staticDirty = probeDirty = renderDirty = true;
+}
+function fieldChanged() { staticDirty = probeDirty = renderDirty = true; }
+function markEdited() { if (!st.edited) { st.edited = true; updateNote(); } syncEditButtons(); }
+
+tabEls.forEach((b, i) => {
+  b.addEventListener('click', () => selectMode(b.dataset.mode));
+  b.addEventListener('keydown', ev => {
+    let j = -1;
+    if (ev.key === 'ArrowRight') j = (i + 1) % tabEls.length;
+    else if (ev.key === 'ArrowLeft') j = (i + tabEls.length - 1) % tabEls.length;
+    else if (ev.key === 'Home') j = 0; else if (ev.key === 'End') j = tabEls.length - 1;
+    if (j < 0) return;
+    ev.preventDefault(); tabEls[j].focus(); selectMode(tabEls[j].dataset.mode);
+  });
+});
+presetsEl.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-preset]'); if (!b) return;
+  loadPreset(st, b.dataset.preset); afterPresetLoad();
+});
+toolsEl.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-tool]'); if (!b) return;
+  st.tool = b.dataset.tool; renderTools(); setHint();
+});
+undoBtn.addEventListener('click', () => {
+  const e = st.added.pop(); if (!e) return;
+  const i = st.els.indexOf(e); if (i >= 0) st.els.splice(i, 1);
+  fieldChanged(); syncEditButtons();
+});
+resetBtn.addEventListener('click', () => { loadPreset(st, st.preset); afterPresetLoad(); });
+radiusIn.addEventListener('input', () => setRadius(u2r(+radiusIn.value)));
+dyeBtn.addEventListener('click', releaseDye);
+speedIn.addEventListener('input', () => { speed = +speedIn.value; speedOut.textContent = `${+speed.toFixed(2)}×`; });
+pauseBtn.addEventListener('click', () => { paused = !paused; syncPause(); renderDirty = true; });
+$$('[data-show]').forEach(inp => inp.addEventListener('change', () => {
+  st.show[inp.dataset.show] = inp.checked;
+  if (inp.dataset.show === 'flow' && inp.checked) initParticles();
+  updateLegend(); staticDirty = renderDirty = true;
+}));
+
+/* ───────── canvas interaction: drag, tap, pan, pinch, wheel, keys ───────── */
+const pointers = new Map();
+function evPos(ev) { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
+function hitElement(sx, sy) {
+  for (let i = st.els.length - 1; i >= 0; i--) {
+    const e = st.els[i]; if (Math.hypot(toSX(e.x) - sx, toSY(e.y) - sy) < 15) return e;
+  }
+  return null;
+}
+function probeZone(sx, sy) {
+  const d = Math.hypot(sx - toSX(st.probe.x), sy - toSY(st.probe.y)), rpx = st.r * view.s, vec = st.kind === 'vector';
+  if (vec && rpx > 18 && Math.abs(d - rpx) < 12) return 'rim';
+  if (d < 16) return 'center';
+  if (vec && d < rpx) return 'inside';
+  return null;
+}
+function moveElement(e, dx, dy) {
+  const group = e.g ? st.els.filter(o => o.g === e.g) : [e];
+  for (const o of group) { o.x = clamp(o.x + dx, view.x0, view.x1); o.y = clamp(o.y + dy, view.y0, view.y1); }
+}
+function addElement(tool, x, y) {
+  if (st.els.length >= MAX_ELS) return null;
+  const e = makeEl(Object.assign({ x, y }, STAMPS[tool]));
+  st.els.push(e); st.added.push(e); markEdited(); fieldChanged();
+  return e;
+}
+function idleCursor() { return st.tool === 'probe' ? 'crosshair' : 'copy'; }
+function hoverCursor(sx, sy) {
+  let c = idleCursor();
+  const z = probeZone(sx, sy);
+  if (hitElement(sx, sy) && z !== 'center') c = 'grab';
+  else if (z === 'rim') c = 'ew-resize';
+  else if (z === 'center' || (z === 'inside' && st.tool === 'probe')) c = 'grab';
+  canvas.style.cursor = c;
+}
+function pinchPair() { const it = pointers.values(); return [it.next().value, it.next().value]; }
+function startPinch() {
+  const [a, b] = pinchPair(), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  cancelAnimationFrame(zoomAnim);
+  drag = { type: 'pinch', d0: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), z0: st.zoom, wx: toWX(mx), wy: toWY(my) };
+}
+function updatePinch() {
+  const [a, b] = pinchPair(), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, d = Math.hypot(a.x - b.x, a.y - b.y);
+  st.zoom = clamp(drag.z0 * d / drag.d0, ZMIN, ZMAX);
+  const s = view.s0 * st.zoom;
+  st.ox = drag.wx - (mx - view.cx) / s; st.oy = drag.wy + (my - view.cy) / s;
+  clampPan(); viewChanged(); zoomUsed = true;
+}
+canvas.addEventListener('pointerdown', ev => {
+  if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+  ev.preventDefault();
+  try { canvas.focus({ preventScroll: true }); } catch (err) { /* ignore */ }
+  const [sx, sy] = evPos(ev);
+  pointers.set(ev.pointerId, { x: sx, y: sy });
+  try { canvas.setPointerCapture(ev.pointerId); } catch (err) { /* ignore */ }
+  hideHint();
+  if (pointers.size === 2) { startPinch(); return; }
+  if (pointers.size > 2 || (drag && (drag.type === 'pinch' || drag.type === 'hold'))) return;
+  const wx = toWX(sx), wy = toWY(sy), el = hitElement(sx, sy), zone = probeZone(sx, sy);
+  if (el && zone !== 'center') drag = { type: 'el', el, lx: wx, ly: wy };
+  else if (zone === 'rim') drag = { type: 'rim' };
+  else if (zone === 'center' || (zone === 'inside' && st.tool === 'probe')) drag = { type: 'probe', ox: st.probe.x - wx, oy: st.probe.y - wy };
+  else if (st.tool !== 'probe') {
+    const e = addElement(st.tool, wx, wy);
+    drag = e ? { type: 'el', el: e, lx: wx, ly: wy } : null;
+  } else drag = { type: 'pending', sx, sy, wx, wy };
+  if (drag && drag.type !== 'pending') canvas.style.cursor = drag.type === 'rim' ? 'ew-resize' : 'grabbing';
+});
+canvas.addEventListener('pointermove', ev => {
+  const [sx, sy] = evPos(ev);
+  if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, { x: sx, y: sy });
+  if (!drag) { hoverCursor(sx, sy); return; }
+  switch (drag.type) {
+    case 'pinch': if (pointers.size >= 2) updatePinch(); break;
+    case 'pending':
+      if (Math.hypot(sx - drag.sx, sy - drag.sy) > 6) {
+        const from = drag; drag = { type: 'pan', lx: sx, ly: sy };
+        canvas.style.cursor = 'grabbing'; panBy(sx - from.sx, sy - from.sy);
+      }
+      break;
+    case 'pan': panBy(sx - drag.lx, sy - drag.ly); drag.lx = sx; drag.ly = sy; break;
+    case 'probe': st.probe.x = toWX(sx) + drag.ox; st.probe.y = toWY(sy) + drag.oy; clampToView(st.probe); probeDirty = renderDirty = true; break;
+    case 'rim': setRadius(Math.hypot(toWX(sx) - st.probe.x, toWY(sy) - st.probe.y)); break;
+    case 'el': {
+      const wx = toWX(sx), wy = toWY(sy);
+      moveElement(drag.el, wx - drag.lx, wy - drag.ly); drag.lx = wx; drag.ly = wy;
+      markEdited(); fieldChanged(); break;
+    }
+  }
+});
+function pointerEnd(ev) {
+  pointers.delete(ev.pointerId);
+  if (!drag) return;
+  if (drag.type === 'pinch' || drag.type === 'hold') { drag = pointers.size ? { type: 'hold' } : null; if (!drag) canvas.style.cursor = idleCursor(); return; }
+  if (drag.type === 'pending' && ev.type === 'pointerup') {
+    st.probe.x = drag.wx; st.probe.y = drag.wy; probeDirty = renderDirty = true;
+  }
+  const rebuild = drag.type === 'el' || drag.type === 'pan';
+  drag = null; canvas.style.cursor = idleCursor();
+  if (rebuild) staticDirty = renderDirty = true;
+}
+canvas.addEventListener('pointerup', pointerEnd);
+canvas.addEventListener('pointercancel', pointerEnd);
+canvas.addEventListener('lostpointercapture', pointerEnd);
+let lastTip = -1e9;
+canvas.addEventListener('wheel', ev => {
+  if (!(ev.ctrlKey || ev.metaKey)) {
+    const now = performance.now();
+    if (!zoomUsed && now - lastTip > 6000) {
+      lastTip = now; ztipEl.classList.add('show'); clearTimeout(ztipEl._t);
+      ztipEl._t = setTimeout(() => ztipEl.classList.remove('show'), 1600);
+    }
+    return;
+  }
+  ev.preventDefault();
+  cancelAnimationFrame(zoomAnim);
+  const [sx, sy] = evPos(ev), unit = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? 320 : 1;
+  zoomAt(Math.exp(-ev.deltaY * unit * 0.0022), sx, sy);
+}, { passive: false });
+let gestureZ0 = 1;
+canvas.addEventListener('gesturestart', ev => { ev.preventDefault(); gestureZ0 = st.zoom; });
+canvas.addEventListener('gesturechange', ev => {
+  ev.preventDefault(); if (pointers.size >= 2) return;
+  const [sx, sy] = typeof ev.clientX === 'number' ? evPos(ev) : [view.cx, view.cy];
+  zoomAt(clamp(gestureZ0 * ev.scale, ZMIN, ZMAX) / st.zoom, sx, sy);
+});
+canvas.addEventListener('gestureend', ev => ev.preventDefault());
+canvas.addEventListener('keydown', ev => {
+  const step = (ev.shiftKey ? 0.25 : 0.05) / Math.max(1, st.zoom); let moved = false, used = true;
+  switch (ev.key) {
+    case 'ArrowLeft': st.probe.x -= step; moved = true; break;
+    case 'ArrowRight': st.probe.x += step; moved = true; break;
+    case 'ArrowUp': st.probe.y += step; moved = true; break;
+    case 'ArrowDown': st.probe.y -= step; moved = true; break;
+    case '+': case '=': animateZoom(1.5); break;
+    case '-': case '_': animateZoom(1 / 1.5); break;
+    case '0': resetView(); break;
+    case '[': if (st.kind === 'vector') setRadius(st.r / 1.12); else used = false; break;
+    case ']': if (st.kind === 'vector') setRadius(st.r * 1.12); else used = false; break;
+    default: used = false;
+  }
+  if (!used) return;
+  ev.preventDefault(); hideHint();
+  if (moved) {
+    st.probe.x = clamp(st.probe.x, -PAN_LIMIT, PAN_LIMIT); st.probe.y = clamp(st.probe.y, -PAN_LIMIT, PAN_LIMIT);
+    probeDirty = renderDirty = true; ensureProbeVisible();
+  }
+});
+
+/* ───────── main loop ───────── */
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+  if (!labVisible || !view.W) return;
+  const coarse = isCoarse();
+  if (builtCoarse && !coarse) staticDirty = true;
+  if (needParticleReinit && !coarse) { initParticles(); needParticleReinit = false; }
+  if (staticDirty) { buildStatic(); staticDirty = false; renderDirty = true; }
+  if (probeDirty) { computeProbe(); updateReadout(); probeDirty = false; renderDirty = true; }
+  if (!paused) {
+    if (st.show.flow) stepParticles(dt);
+    stepDye(dt);
+    if (mode === 'curl') paddleAngle = (paddleAngle + info.omega * dt * simRate()) % TAU;
+    renderDirty = true;
+  }
+  if (renderDirty) { render(); renderDirty = false; }
+}
+
+/* ───────── history: the turning triangle ───────── */
+const yearIn = $('#year'), yearOut = $('#year-out'), morphG = $('#morph-g'), morphName = $('#morph-name'), ERAS = $$('.era');
+const MORPH_NAMES = [
+  'A sideways triangle: Hamilton’s operator',
+  'Still sideways, now acting on f(q)',
+  'Upright at last, in Tait’s treatise',
+  'Nicknamed “nabla” and put to work in physics',
+  'Called “del” in Wilson’s Vector Analysis',
+];
+function setYear(y) {
+  const yr = Math.round(y);
+  if (+yearIn.value !== yr) yearIn.value = String(yr);
+  yearOut.textContent = String(yr);
+  const t = clamp((y - 1853) / 14, 0, 1), e = t * t * (3 - 2 * t);
+  morphG.setAttribute('transform', `rotate(${(-90 * (1 - e)).toFixed(2)} 60 55)`);
+  let idx = 0; ERAS.forEach((el, i) => { if (y >= +el.dataset.year - 1e-6) idx = i; });
+  ERAS.forEach((el, i) => el.classList.toggle('is-active', i === idx));
+  if (morphName.textContent !== MORPH_NAMES[idx]) morphName.textContent = MORPH_NAMES[idx];
+}
+let yearAnim = 0;
+function animateYear(target) {
+  cancelAnimationFrame(yearAnim);
+  const from = +yearIn.value, t0 = performance.now(), dur = reduceMotion ? 0 : 1000;
+  const step = now => {
+    const t = dur ? clamp((now - t0) / dur, 0, 1) : 1, e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    setYear(from + (target - from) * e);
+    if (t < 1) yearAnim = requestAnimationFrame(step);
+  };
+  yearAnim = requestAnimationFrame(step);
+}
+yearIn.addEventListener('input', () => { cancelAnimationFrame(yearAnim); setYear(+yearIn.value); });
+$$('.era-pick').forEach(b => b.addEventListener('click', () => animateYear(+b.dataset.year)));
+$$('[data-open]').forEach(b => b.addEventListener('click', () => {
+  const m = b.dataset.mode, S = TABS[m];
+  loadPreset(S, b.dataset.preset);
+  if (b.dataset.probe) { const [x, y] = b.dataset.probe.split(',').map(Number); S.probe.x = x; S.probe.y = y; clampProbe(S); }
+  if (b.dataset.r) S.r = +b.dataset.r;
+  S.tool = 'probe'; S.customHint = b.dataset.hint || null; S.hintSeen = false;
+  selectMode(m, true);
+  labEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+}));
+
+/* ───────── the nabla harp ───────── */
+const harp = $('#harp'), harpStrings = $('#harp-strings'), STR_Y = [], STR_EL = [];
+const NOTES = [293.66, 329.63, 392.0, 440.0, 493.88, 587.33, 659.25, 783.99, 880.0];
+for (let i = 0; i < NOTES.length; i++) {
+  const y = 27 + i * 5.6, t = (y - 22) / 56.91, xl = 33.65 + t * 32.69 + 1.8, xr = 99.04 - t * 32.7 - 1.2;
+  const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  ln.setAttribute('x1', xl.toFixed(2)); ln.setAttribute('x2', xr.toFixed(2)); ln.setAttribute('y1', y.toFixed(2)); ln.setAttribute('y2', y.toFixed(2));
+  ln.setAttribute('class', 'string'); harpStrings.appendChild(ln); STR_Y.push(y); STR_EL.push(ln);
+}
+let actx = null; const bufs = [];
+function ksBuffer(freq) {
+  const sr = actx.sampleRate, len = Math.floor(sr * 2.4), buf = actx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  const Nr = Math.max(2, Math.round(sr / freq)), ring = new Float32Array(Nr);
+  let prev = 0, mean = 0;
+  for (let i = 0; i < Nr; i++) { prev = prev * 0.45 + (Math.random() * 2 - 1) * 0.55; ring[i] = prev; mean += prev; }
+  mean /= Nr; for (let i = 0; i < Nr; i++) ring[i] -= mean;
+  let idx = 0, peak = 0;
+  for (let i = 0; i < len; i++) {
+    const a = ring[idx], b = ring[(idx + 1) % Nr];
+    d[i] = a; ring[idx] = (a + b) * 0.5 * 0.9966; idx = (idx + 1) % Nr;
+    if (Math.abs(a) > peak) peak = Math.abs(a);
+  }
+  const gain = peak > 0 ? 0.7 / peak : 1, fin = Math.floor(sr * 0.002), fout = Math.floor(sr * 0.25);
+  for (let i = 0; i < len; i++) { let v = d[i] * gain; if (i < fin) v *= i / fin; if (i > len - fout) v *= (len - i) / fout; d[i] = v; }
+  return buf;
+}
+function pluck(i) {
+  const el = STR_EL[i];
+  el.classList.add('lit'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('lit'), 160);
+  if (!reduceMotion && el.animate) {
+    el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-1.1px)' }, { transform: 'translateY(.9px)' }, { transform: 'translateY(-.6px)' }, { transform: 'translateY(.35px)' }, { transform: 'translateY(0)' }], { duration: 620, easing: 'ease-out' });
+  }
+  try {
+    if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; actx = new AC(); }
+    if (actx.state === 'suspended') actx.resume();
+    if (!bufs[i]) bufs[i] = ksBuffer(NOTES[i]);
+    const src = actx.createBufferSource(), gn = actx.createGain();
+    src.buffer = bufs[i]; gn.gain.value = 0.26; src.connect(gn); gn.connect(actx.destination); src.start();
+  } catch (err) { /* audio is optional */ }
+}
+function harpPoint(ev) {
+  const m = harp.getScreenCTM(); if (!m) return null;
+  const pt = harp.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  return pt.matrixTransform(m.inverse());
+}
+let harpDown = false, lastHY = null;
+harp.addEventListener('pointerdown', ev => {
+  ev.preventDefault(); harpDown = true; harp.setPointerCapture(ev.pointerId);
+  const p = harpPoint(ev); if (!p) return; lastHY = p.y;
+  let best = -1, bd = 3.4; STR_Y.forEach((y, i) => { const dd = Math.abs(y - p.y); if (dd < bd) { bd = dd; best = i; } });
+  if (best >= 0) pluck(best);
+});
+harp.addEventListener('pointermove', ev => {
+  if (!harpDown) return; const p = harpPoint(ev); if (!p || lastHY == null) return;
+  const lo = Math.min(lastHY, p.y), hi = Math.max(lastHY, p.y);
+  STR_Y.forEach((y, i) => { if (y > lo && y <= hi) pluck(i); });
+  lastHY = p.y;
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => harp.addEventListener(t, () => { harpDown = false; lastHY = null; }));
+harp.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  ev.preventDefault(); STR_EL.forEach((_, i) => setTimeout(() => pluck(i), i * 70));
+});
+
+/* ───────── boot ───────── */
+readPalette();
+const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
+if (mqDark.addEventListener) mqDark.addEventListener('change', readPalette);
+new MutationObserver(readPalette).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { staticDirty = renderDirty = true; });
+
+new ResizeObserver(() => resize()).observe(wrapEl);
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(entries => { labVisible = entries[entries.length - 1].isIntersecting; if (labVisible) renderDirty = true; }).observe(wrapEl);
+}
+const fromHash = () => { const h = location.hash.slice(1); return MODES.includes(h) ? h : null; };
+window.addEventListener('hashchange', () => { const m = fromHash(); if (m && m !== mode) setMode(m); });
+syncPause();
+resize();
+const m0 = fromHash();
+setMode(m0 || 'gradient');
+if (m0) setTimeout(() => labEl.scrollIntoView({ block: 'start' }), 60);
+setYear(1846);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
